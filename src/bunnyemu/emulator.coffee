@@ -1,4 +1,9 @@
 
+# TBD
+class Hardware
+  # required fields: id, version, manufacturer
+  # required method: request()
+
 class Emulator
   RegisterNames: "ABCXYZIJ"
 
@@ -8,8 +13,9 @@ class Emulator
     if not memory then memory = []
     @memory = memory
     @hardware = []
+    # if more than 256 interrupts queue up, we "catch fire".
     @onFire = false
-    # we queue interrupts when in an interrupt handler.
+    # we queue interrupts when in an interrupt handler. the queue is just interrupt ids.
     @queueing = false
     @interruptQueue = []
     @cycles = 0
@@ -39,6 +45,9 @@ class Emulator
   readRegister: (number) ->
     @registers[@RegisterNames[number]] or 0
 
+  writeRegister: (number, value) ->
+    @registers[@RegisterNames[number]] = value
+
   # execute one instruction at PC.
   step: ->
     if not @queueing then @triggerQueuedInterrupt()
@@ -54,24 +63,38 @@ class Emulator
   stepSpecial: (op, a) ->
     switch op
       when 0x01 # JSR
-        pc = @getValue(a, false)
+        pc = @fetchOperand(a)
         @push(@registers.PC)
         @registers.PC = pc
         @cycles += 3
+      when 0x08 # INT
+        @queueInterrupt(@fetchOperand(a))
+        @cycles += 4
+      when 0x09 # IAG
+        @fetchOperand(a, true)
+        @storeOperand(a, @registers.IA)
+        @cycles += 1
+      when 0x0a # IAS
+        @registers.IA = @fetchOperand(a)
+        @cycles += 1
       when 0x0b # RFI
         @queueing = false
         @registers.A = @pop()
         @registers.PC = @pop()
         @cycles += 3
+      when 0x0c # IAQ
+        @queueing = (if @fetchOperand(a) != 0 then true else false)
+        @cycles += 2
 
-  skipValue: (operand) ->
+  skipOperand: (operand) ->
     if (code >= 0x10 and code < 0x18) or (code == 0x1a) or (code == 0x1e) or (code == 0x1f)
       # [R + imm], [SP + imm], [imm], imm
       @nextPC()
 
   # operand: the A or B operand
   # destination: true if the operand is in the destination position (vs. source)
-  getValue: (operand, destination = false) ->
+  # if there's an immediate value, and the operand is a destination, the immediate will be stored in @immediate.
+  fetchOperand: (operand, destination = false) ->
     if operand < 0x08
       # R
       @readRegister(operand)
@@ -81,6 +104,7 @@ class Emulator
     else if operand < 0x18
       # [R + imm]
       word = @nextPC()
+      if destination then @immediate = word
       @cycles += 1
       @memory[(word + @readRegister(operand - 0x10)) & 0xffff] or 0
     else if operand == 0x18
@@ -92,6 +116,7 @@ class Emulator
     else if operand == 0x1a
       # PICK n [SP + imm]
       word = @nextPC()
+      if destination then @immediate = word
       @cycles += 1
       @memory[(word + @registers.SP) & 0xffff] or 0
     else if operand == 0x1b
@@ -106,27 +131,66 @@ class Emulator
     else if operand == 0x1e
       # [imm]
       word = @nextPC()
+      if destination then @immediate = word
       @cycles += 1
       @memory[word] or 0
     else if operand == 0x1f
       # imm
       word = @nextPC()
+      if destination then @immediate = word
       @cycles += 1
       word
     else
       # literal -1 .. 30
       (operand - 0x21) & 0xffff
 
+  storeOperand: (operand, value) ->
+    if operand < 0x08
+      # R
+      @writeRegister(operand, value)
+    else if operand < 0x10
+      # [R]
+      @memory[@readRegister(operand - 0x08)] = value
+    else if operand < 0x18
+      # [R + imm]
+      @memory[(@immediate + @readRegister(operand - 0x10)) & 0xffff] = value
+    else if operand == 0x18
+      # PUSH [--SP]
+      @push(value)
+    else if operand == 0x19
+      # PEEK [SP]
+      @memory[@registers.SP] = value
+    else if operand == 0x1a
+      # PICK n [SP + imm]
+      @memory[(@immediate + @registers.SP) & 0xffff] = value
+    else if operand == 0x1b
+      # SP
+      @registers.SP = value
+    else if operand == 0x1c
+      # PC
+      @registers.PC = value
+    else if operand == 0x1d
+      # EX
+      @registers.EX = value
+    else if operand == 0x1e
+      # [imm]
+      @memory[@immediate] = value
+    # ignore "store into immediate"
+
+  queueInterrupt: (id) ->
+    @interruptQueue.push(id)
+    if @interruptQueue.length > 256 then @onFire = true
+
   triggerQueuedInterrupt: ->
     if @interruptQueue.length == 0 then return false
-    interrupt = @interruptQueue.shift()
+    id = @interruptQueue.shift()
     if @registers.IA == 0 then return false
     # jump to interrupt handler!
     @queueing = true
     @push(@registers.PC)
     @push(@registers.A)
     @registers.PC = @registers.IA
-    interrupt()
+    @registers.A = id
     true
 
 exports.Emulator = Emulator
