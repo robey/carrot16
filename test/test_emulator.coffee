@@ -173,6 +173,7 @@ describe "Emulator", ->
 
   describe "special ops", ->
     e = new bunnyemu.Emulator()
+    e.hardware = [ new bunnyemu.Hardware(0x22334455, 2, 0x66779988), new bunnyemu.Hardware(0x12341234, 1, 0x56785678) ]
 
     it "JSR", ->
       preloadSpecial(e, 0x01, 0)
@@ -230,4 +231,39 @@ describe "Emulator", ->
       e.registers.J = 0
       e.step()
       e.queueing.should.equal(false)
+
+    it "HWN", ->
+      preloadSpecial(e, 0x10, 6)
+      e.step()
+      e.registers.I.should.equal(2)
+
+    it "HWQ", ->
+      preloadSpecial(e, 0x11, 0)
+      e.registers.A = 0
+      e.step()
+      e.registers.A.should.equal(0x4455)
+      e.registers.B.should.equal(0x2233)
+      e.registers.C.should.equal(2)
+      e.registers.X.should.equal(0x9988)
+      e.registers.Y.should.equal(0x6677)
+      # don't spaz out if HWQ refers to nonexistent hardware:
+      preloadSpecial(e, 0x11, 0)
+      e.registers.A = 2
+      e.step()
+      e.registers.A.should.equal(0)
+      e.registers.B.should.equal(0)
+      e.registers.C.should.equal(0)
+      e.registers.X.should.equal(0)
+      e.registers.Y.should.equal(0)
+
+    it "HWI", ->
+      e.hardware[1].request = (emu) ->
+        emu.registers.Z = 0xeeee
+        30
+      preloadSpecial(e, 0x12, 0)
+      e.cycles = 0
+      e.registers.A = 1
+      e.step()
+      e.registers.Z.should.equal(0xeeee)
+      e.cycles.should.equal(30)
 

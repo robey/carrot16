@@ -1,8 +1,11 @@
 
 # TBD
 class Hardware
-  # required fields: id, version, manufacturer
-  # required method: request()
+  # required id, version, manufacturer for HWQ
+  constructor: (@id, @version, @manufacturer) ->
+
+  # handler for HWI
+  request: (emulator) ->
 
 class Emulator
   RegisterNames: "ABCXYZIJ"
@@ -85,6 +88,22 @@ class Emulator
       when 0x0c # IAQ
         @queueing = (if @fetchOperand(a) != 0 then true else false)
         @cycles += 2
+      when 0x10 # HWN
+        @fetchOperand(a, true)
+        @storeOperand(a, @hardware.length)
+        @cycles += 2
+      when 0x11 # HWQ
+        n = @fetchOperand(a)
+        device = if n < @hardware.length then @hardware[n] else new Hardware(0, 0, 0)
+        @registers.A = device.id & 0xffff
+        @registers.B = (device.id >> 16) & 0xffff
+        @registers.C = device.version
+        @registers.X = device.manufacturer & 0xffff
+        @registers.Y = (device.manufacturer >> 16) & 0xffff
+        @cycles += 4
+      when 0x12 # HWI
+        n = @fetchOperand(a)
+        @cycles += if n < @hardware.length then @hardware[n].request(this) else 0
 
   skipOperand: (operand) ->
     if (code >= 0x10 and code < 0x18) or (code == 0x1a) or (code == 0x1e) or (code == 0x1f)
@@ -194,3 +213,4 @@ class Emulator
     true
 
 exports.Emulator = Emulator
+exports.Hardware = Hardware
