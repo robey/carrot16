@@ -3,14 +3,14 @@ bunnyemu = require '../src/bunnyemu'
 
 util = require "util"
 
-pack = (op, a, b) ->
+pack = (op, b, a) ->
   ((a & 0x3f) << 10) | ((b & 0x1f) << 5) | (op & 0x1f)
 
-preload = (e, op, a, b) ->
+preload = (e, op, b, a) ->
   e.registers.PC = 0x10
-  e.memory[e.registers.PC] = pack(op, a, b)
+  e.memory[e.registers.PC] = pack(op, b, a)
 
-preloadSpecial = (e, op, a) -> preload(e, 0, a, op)
+preloadSpecial = (e, op, a) -> preload(e, 0, op, a)
   
 describe "Emulator", ->
   it "nextPC", ->
@@ -265,5 +265,29 @@ describe "Emulator", ->
       e.registers.A = 1
       e.step()
       e.registers.Z.should.equal(0xeeee)
-      e.cycles.should.equal(30)
+      e.cycles.should.equal(34)
 
+  describe "binary ops", ->
+    e = new bunnyemu.Emulator()
+    e.hardware = [ new bunnyemu.Hardware(0x22334455, 2, 0x66779988), new bunnyemu.Hardware(0x12341234, 1, 0x56785678) ]
+
+    it "SET", ->
+      preload(e, 0x01, 0x03, 0x04)
+      e.registers.X = 5
+      e.registers.Y = 12
+      e.step()
+      e.registers.X.should.equal(12)
+
+    it "ADD", ->
+      preload(e, 0x02, 0x03, 0x04)
+      e.registers.X = 5
+      e.registers.Y = 12
+      e.step()
+      e.registers.X.should.equal(17)
+
+    it "SUB", ->
+      preload(e, 0x03, 0x03, 0x04)
+      e.registers.X = 15
+      e.registers.Y = 12
+      e.step()
+      e.registers.X.should.equal(3)

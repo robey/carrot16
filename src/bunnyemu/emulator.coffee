@@ -60,8 +60,12 @@ class Emulator
     a = (instruction >> 10) & 0x3f
     b = (instruction >> 5) & 0x1f
 
+    # FIXME: BRK
+
     if op == 0
       @stepSpecial(b, a)
+    else
+      @stepBinary(op, a, b)
 
   stepSpecial: (op, a) ->
     switch op
@@ -103,7 +107,31 @@ class Emulator
         @cycles += 4
       when 0x12 # HWI
         n = @fetchOperand(a)
+        @cycles += 4
         @cycles += if n < @hardware.length then @hardware[n].request(this) else 0
+
+  stepBinary: (op, a, b) ->
+    av = @fetchOperand(a)
+    bv = @fetchOperand(b, true)
+    rv = 0
+    switch op
+      when 0x01 # SET
+        rv = av
+        @cycles += 1
+      when 0x02 # ADD
+        rv = av + bv
+        @cycles += 2
+      when 0x03 # SUB
+        rv = -av + bv
+        @cycles += 2
+    @storeOperand(b, rv & 0xffff)
+    switch op
+      when 0x1e # STI
+        @registers.I = (@registers.I + 1) & 0xffff
+        @registers.J = (@registers.J + 1) & 0xffff
+      when 0x1f # STD
+        @registers.I = (@registers.I - 1) & 0xffff
+        @registers.J = (@registers.J - 1) & 0xffff
 
   skipOperand: (operand) ->
     if (code >= 0x10 and code < 0x18) or (code == 0x1a) or (code == 0x1e) or (code == 0x1f)
