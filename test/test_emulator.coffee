@@ -530,3 +530,28 @@ describe "Emulator", ->
       e.registers.Y = (-10) & 0xffff
       e.step()
       e.registers.PC.should.equal(0x12)
+
+  describe "block move ops", ->
+    e = new bunnyemu.Emulator()
+
+    it "STI", ->
+      preload(e, 0x1e, 0x0e, 0x0f)
+      e.registers.I = 100
+      e.registers.J = 200
+      e.memory[100] = 0x4545
+      e.memory[200] = 0xbcbc
+      e.step()
+      e.memory[100].should.equal(0xbcbc)
+      e.registers.I.should.equal(101)
+      e.registers.J.should.equal(201)
+
+    it "STD", ->
+      preload(e, 0x1f, 0x0e, 0x0f)
+      e.registers.I = 100
+      e.registers.J = 200
+      e.memory[100] = 0x4545
+      e.memory[200] = 0xbcbc
+      e.step()
+      e.memory[100].should.equal(0xbcbc)
+      e.registers.I.should.equal(99)
+      e.registers.J.should.equal(199)
