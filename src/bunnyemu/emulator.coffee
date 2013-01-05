@@ -68,8 +68,10 @@ class Emulator
 
     if op == 0
       @stepSpecial(b, a)
-    else
+    else if op < 0x10
       @stepBinary(op, a, b)
+    else
+      @stepConditional(op, a, b)
 
   stepSpecial: (op, a) ->
     switch op
@@ -159,6 +161,18 @@ class Emulator
       when 0x0c # XOR
         rv = av ^ bv
         @cycles += 1
+      when 0x0d # SHR
+        @registers.EX = ((bv << 16) >>> av) & 0xffff
+        rv = (bv >>> av)
+        @cycles += 2
+      when 0x0e # ASR
+        @registers.EX = ((@signed(bv) << 16) >>> av) & 0xffff
+        rv = (@signed(bv) >> av)
+        @cycles += 2
+      when 0x0f # SHL
+        @registers.EX = ((bv << av) >>> 16) & 0xffff
+        rv = (bv << av)
+        @cycles += 2
     @storeOperand(b, rv & 0xffff)
     switch op
       when 0x1e # STI
@@ -168,8 +182,48 @@ class Emulator
         @registers.I = (@registers.I - 1) & 0xffff
         @registers.J = (@registers.J - 1) & 0xffff
 
+  stepConditional: (op, a, b) ->
+    av = @fetchOperand(a)
+    bv = @fetchOperand(b, true)
+    switch op
+      when 0x10 # IFB
+        if (bv & av) == 0 then @skip()
+        @cycles += 2
+      when 0x11 # IFC
+        if (bv & av) != 0 then @skip()
+        @cycles += 2
+      when 0x12 # IFE
+        if bv != av then @skip()
+        @cycles += 2
+      when 0x13 # IFN
+        if bv == av then @skip()
+        @cycles += 2
+      when 0x14 # IFG
+        if bv <= av then @skip()
+        @cycles += 2
+      when 0x15 # IFA
+        if @signed(bv) <= @signed(av) then @skip()
+        @cycles += 2
+      when 0x16 # IFL
+        if bv >= av then @skip()
+        @cycles += 2
+      when 0x17 # IFU
+        if @signed(bv) >= @signed(av) then @skip()
+        @cycles += 2
+
+  skip: ->
+    loop
+      @cycles += 1
+      instruction = @nextPC()
+      op = instruction & 0x1f
+      a = (instruction >> 10) & 0x3f
+      b = (instruction >> 5) & 0x1f
+      @skipOperand(a)
+      @skipOperand(b)
+      return if op < 0x10 or op > 0x17
+
   skipOperand: (operand) ->
-    if (code >= 0x10 and code < 0x18) or (code == 0x1a) or (code == 0x1e) or (code == 0x1f)
+    if (operand >= 0x10 and operand < 0x18) or (operand == 0x1a) or (operand == 0x1e) or (operand == 0x1f)
       # [R + imm], [SP + imm], [imm], imm
       @nextPC()
 

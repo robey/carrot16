@@ -10,6 +10,12 @@ preload = (e, op, b, a) ->
   e.registers.PC = 0x10
   e.memory[e.registers.PC] = pack(op, b, a)
 
+preloadNext = (e, n, op, b, a) ->
+  e.memory[e.registers.PC + n] = pack(op, b, a)
+
+preloadData = (e, n, data) ->
+  e.memory[e.registers.PC + n] = data
+
 preloadSpecial = (e, op, a) -> preload(e, 0, op, a)
   
 describe "Emulator", ->
@@ -63,6 +69,31 @@ describe "Emulator", ->
     e.registers.J = 24
     e.readRegister(3).should.equal(20)
     e.readRegister(7).should.equal(24)
+
+  it "skip", ->
+    e = new bunnyemu.Emulator()
+    # skip normal op
+    e.registers.PC = 0
+    e.memory[0] = pack(0, 0, 0)
+    e.skip()
+    e.registers.PC.should.equal(1)
+    # skip branch
+    e.registers.PC = 0
+    e.memory[0] = pack(0x10, 0x1, 0x2)
+    e.skip()
+    e.registers.PC.should.equal(2)
+    # skip several branches
+    e.registers.PC = 0
+    e.memory[0] = pack(0x10, 0x1, 0x2)
+    e.memory[1] = pack(0x12, 0x1, 0x2)
+    e.memory[2] = pack(0x11, 0x1, 0x2)
+    e.skip()
+    e.registers.PC.should.equal(4)
+    # skip opcodes with immediates
+    e.registers.PC = 0
+    e.memory[0] = pack(0x01, 0x10, 0x1e)
+    e.skip()
+    e.registers.PC.should.equal(3)
 
   describe "fetchOperand", ->
     e = new bunnyemu.Emulator()
@@ -269,7 +300,6 @@ describe "Emulator", ->
 
   describe "binary ops", ->
     e = new bunnyemu.Emulator()
-    e.hardware = [ new bunnyemu.Hardware(0x22334455, 2, 0x66779988), new bunnyemu.Hardware(0x12341234, 1, 0x56785678) ]
 
     it "SET", ->
       preload(e, 0x01, 0x03, 0x04)
@@ -359,3 +389,126 @@ describe "Emulator", ->
       e.registers.Y = 0x9191
       e.step()
       e.registers.X.should.equal(0x6e6e)
+
+    it "SHR", ->
+      preload(e, 0x0d, 0x03, 0x04)
+      e.registers.X = 0x1234
+      e.registers.Y = 4
+      e.step()
+      e.registers.X.should.equal(0x123)
+      e.registers.EX.should.equal(0x4000)
+
+    it "ASR", ->
+      preload(e, 0x0e, 0x03, 0x04)
+      e.registers.X = 0xf999
+      e.registers.Y = 4
+      e.step()
+      e.registers.X.should.equal(0xff99)
+      e.registers.EX.should.equal(0x9000)
+
+    it "SHL", ->
+      preload(e, 0x0f, 0x03, 0x04)
+      e.registers.X = 0x1234
+      e.registers.Y = 4
+      e.step()
+      e.registers.X.should.equal(0x2340)
+      e.registers.EX.should.equal(0x1)
+
+  describe "conditional ops", ->
+    e = new bunnyemu.Emulator()
+
+    it "IFB", ->
+      preload(e, 0x10, 0x03, 0x04)
+      e.registers.X = 0x0001
+      e.registers.Y = 0xffff
+      e.step()
+      e.registers.PC.should.equal(0x11)
+      preload(e, 0x10, 0x03, 0x04)
+      e.registers.X = 0x0001
+      e.registers.Y = 0xfff0
+      e.step()
+      e.registers.PC.should.equal(0x12)
+
+    it "IFC", ->
+      preload(e, 0x11, 0x03, 0x04)
+      e.registers.X = 0x0001
+      e.registers.Y = 0xffff
+      e.step()
+      e.registers.PC.should.equal(0x12)
+      preload(e, 0x11, 0x03, 0x04)
+      e.registers.X = 0x0001
+      e.registers.Y = 0xfff0
+      e.step()
+      e.registers.PC.should.equal(0x11)
+
+    it "IFE", ->
+      preload(e, 0x12, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2343
+      e.step()
+      e.registers.PC.should.equal(0x11)
+      preload(e, 0x12, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2399
+      e.step()
+      e.registers.PC.should.equal(0x12)
+
+    it "IFN", ->
+      preload(e, 0x13, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2343
+      e.step()
+      e.registers.PC.should.equal(0x12)
+      preload(e, 0x13, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2399
+      e.step()
+      e.registers.PC.should.equal(0x11)
+
+    it "IFG", ->
+      preload(e, 0x14, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2300
+      e.step()
+      e.registers.PC.should.equal(0x11)
+      preload(e, 0x14, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2399
+      e.step()
+      e.registers.PC.should.equal(0x12)
+
+    it "IFA", ->
+      preload(e, 0x15, 0x03, 0x04)
+      e.registers.X = (-10) & 0xffff
+      e.registers.Y = 10
+      e.step()
+      e.registers.PC.should.equal(0x12)
+      preload(e, 0x15, 0x03, 0x04)
+      e.registers.X = 10
+      e.registers.Y = (-10) & 0xffff
+      e.step()
+      e.registers.PC.should.equal(0x11)
+
+    it "IFL", ->
+      preload(e, 0x16, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2300
+      e.step()
+      e.registers.PC.should.equal(0x12)
+      preload(e, 0x16, 0x03, 0x04)
+      e.registers.X = 0x2343
+      e.registers.Y = 0x2399
+      e.step()
+      e.registers.PC.should.equal(0x11)
+
+    it "IFU", ->
+      preload(e, 0x17, 0x03, 0x04)
+      e.registers.X = (-10) & 0xffff
+      e.registers.Y = 10
+      e.step()
+      e.registers.PC.should.equal(0x11)
+      preload(e, 0x17, 0x03, 0x04)
+      e.registers.X = 10
+      e.registers.Y = (-10) & 0xffff
+      e.step()
+      e.registers.PC.should.equal(0x12)
