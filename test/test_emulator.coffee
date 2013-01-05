@@ -414,6 +414,24 @@ describe "Emulator", ->
       e.registers.X.should.equal(0x2340)
       e.registers.EX.should.equal(0x1)
 
+    it "ADX", ->
+      preload(e, 0x1a, 0x03, 0x04)
+      e.registers.X = 0x1111
+      e.registers.Y = 0x2222
+      e.registers.EX = 0xf444
+      e.step()
+      e.registers.X.should.equal(0x2777)
+      e.registers.EX.should.equal(1)
+
+    it "SBX", ->
+      preload(e, 0x1b, 0x03, 0x04)
+      e.registers.X = 0x1111
+      e.registers.Y = 0x2222
+      e.registers.EX = 1
+      e.step()
+      e.registers.X.should.equal((- 0x1110) & 0xffff)
+      e.registers.EX.should.equal(0xffff)
+
   describe "conditional ops", ->
     e = new bunnyemu.Emulator()
 

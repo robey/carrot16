@@ -70,8 +70,22 @@ class Emulator
       @stepSpecial(b, a)
     else if op < 0x10
       @stepBinary(op, a, b)
-    else
+    else if op < 0x18
       @stepConditional(op, a, b)
+    else if op < 0x1e
+      @stepBinary(op, a, b)
+    else
+      av = @fetchOperand(a)
+      bv = @fetchOperand(b, true)
+      @storeOperand(b, av & 0xffff)
+      @cycles += 2
+      switch op
+        when 0x1e # STI
+          @registers.I = (@registers.I + 1) & 0xffff
+          @registers.J = (@registers.J + 1) & 0xffff
+        when 0x1f # STD
+          @registers.I = (@registers.I - 1) & 0xffff
+          @registers.J = (@registers.J - 1) & 0xffff
 
   stepSpecial: (op, a) ->
     switch op
@@ -173,14 +187,15 @@ class Emulator
         @registers.EX = ((bv << av) >>> 16) & 0xffff
         rv = (bv << av)
         @cycles += 2
+      when 0x1a # ADX
+        rv = bv + av + @registers.EX
+        @registers.EX = (rv >> 16) & 0xffff
+        @cycles += 3
+      when 0x1b # SBX
+        rv = -av + bv + @registers.EX
+        @registers.EX = (rv >> 16) & 0xffff
+        @cycles += 3
     @storeOperand(b, rv & 0xffff)
-    switch op
-      when 0x1e # STI
-        @registers.I = (@registers.I + 1) & 0xffff
-        @registers.J = (@registers.J + 1) & 0xffff
-      when 0x1f # STD
-        @registers.I = (@registers.I - 1) & 0xffff
-        @registers.J = (@registers.J - 1) & 0xffff
 
   stepConditional: (op, a, b) ->
     av = @fetchOperand(a)
@@ -188,28 +203,21 @@ class Emulator
     switch op
       when 0x10 # IFB
         if (bv & av) == 0 then @skip()
-        @cycles += 2
       when 0x11 # IFC
         if (bv & av) != 0 then @skip()
-        @cycles += 2
       when 0x12 # IFE
         if bv != av then @skip()
-        @cycles += 2
       when 0x13 # IFN
         if bv == av then @skip()
-        @cycles += 2
       when 0x14 # IFG
         if bv <= av then @skip()
-        @cycles += 2
       when 0x15 # IFA
         if @signed(bv) <= @signed(av) then @skip()
-        @cycles += 2
       when 0x16 # IFL
         if bv >= av then @skip()
-        @cycles += 2
       when 0x17 # IFU
         if @signed(bv) >= @signed(av) then @skip()
-        @cycles += 2
+    @cycles += 2
 
   skip: ->
     loop
