@@ -291,3 +291,71 @@ describe "Emulator", ->
       e.registers.Y = 12
       e.step()
       e.registers.X.should.equal(3)
+
+    it "MUL", ->
+      preload(e, 0x04, 0x03, 0x04)
+      e.registers.X = 1500
+      e.registers.Y = 1200
+      e.step()
+      e.registers.X.should.equal(30528)
+      e.registers.EX.should.equal(27)
+
+    it "MLI", ->
+      preload(e, 0x05, 0x03, 0x04)
+      e.registers.X = (-1500) & 0xffff
+      e.registers.Y = 1200
+      e.step()
+      # unclear to me how useful this would be inside DCPU.
+      e.registers.X.should.equal((-30528) & 0xffff)
+      e.registers.EX.should.equal((27) ^ 0xffff)
+
+    it "DIV", ->
+      preload(e, 0x06, 0x03, 0x04)
+      e.registers.X = 1500
+      e.registers.Y = 1200
+      e.step()
+      e.registers.X.should.equal(1)
+      e.registers.EX.should.equal(16384)
+
+    it "DVI", ->
+      preload(e, 0x07, 0x03, 0x04)
+      e.registers.X = (-1500) & 0xffff
+      e.registers.Y = 1200
+      e.step()
+      e.registers.X.should.equal((-1) & 0xffff)
+      e.registers.EX.should.equal(49152)
+
+    it "MOD", ->
+      preload(e, 0x08, 0x03, 0x04)
+      e.registers.X = 1500
+      e.registers.Y = 1200
+      e.step()
+      e.registers.X.should.equal(300)
+
+    it "MDI", ->
+      preload(e, 0x09, 0x03, 0x04)
+      e.registers.X = (-7) & 0xffff
+      e.registers.Y = 16
+      e.step()
+      e.registers.X.should.equal((-7) & 0xffff)
+
+    it "AND", ->
+      preload(e, 0x0a, 0x03, 0x04)
+      e.registers.X = 0xff77
+      e.registers.Y = 0x9191
+      e.step()
+      e.registers.X.should.equal(0x9111)
+
+    it "BOR", ->
+      preload(e, 0x0b, 0x03, 0x04)
+      e.registers.X = 0x0f0f
+      e.registers.Y = 0x9191
+      e.step()
+      e.registers.X.should.equal(0x9f9f)
+
+    it "XOR", ->
+      preload(e, 0x0c, 0x03, 0x04)
+      e.registers.X = 0xffff
+      e.registers.Y = 0x9191
+      e.step()
+      e.registers.X.should.equal(0x6e6e)

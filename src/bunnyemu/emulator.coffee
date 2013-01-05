@@ -51,6 +51,10 @@ class Emulator
   writeRegister: (number, value) ->
     @registers[@RegisterNames[number]] = value
 
+  # turn a 16-bit signed value into a js signed value
+  signed: (value) ->
+    if value & 0x8000 then (value | 0xffff0000) else value
+
   # execute one instruction at PC.
   step: ->
     if not @queueing then @triggerQueuedInterrupt()
@@ -124,6 +128,37 @@ class Emulator
       when 0x03 # SUB
         rv = -av + bv
         @cycles += 2
+      when 0x04 # MUL
+        rv = av * bv
+        @registers.EX = (rv >> 16) & 0xffff
+        @cycles += 2
+      when 0x05 # MLI
+        rv = @signed(av) * @signed(bv)
+        @registers.EX = (rv >> 16) & 0xffff
+        @cycles += 2
+      when 0x06 # DIV
+        rv = if av == 0 then 0 else bv / av
+        @registers.EX = ((bv << 16) / av) & 0xffff
+        @cycles += 3
+      when 0x07 # DVI
+        rv = if av == 0 then 0 else @signed(bv) / @signed(av)
+        @registers.EX = ((bv << 16) / av) & 0xffff
+        @cycles += 3
+      when 0x08 # MOD
+        rv = if av == 0 then 0 else bv % av
+        @cycles += 3
+      when 0x09 # MDI
+        rv = if av == 0 then 0 else @signed(bv) % @signed(av)
+        @cycles += 3
+      when 0x0a # AND
+        rv = av & bv
+        @cycles += 1
+      when 0x0b # BOR
+        rv = av | bv
+        @cycles += 1
+      when 0x0c # XOR
+        rv = av ^ bv
+        @cycles += 1
     @storeOperand(b, rv & 0xffff)
     switch op
       when 0x1e # STI
