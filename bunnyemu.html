@@ -116,14 +116,14 @@ SUB PC, 1
             </div>
           </div>
           <div class="row-fluid tab_content" id="tab2_content" onscroll="updateMemoryView()">
-            <div id="md_view">
-              <div class="span1 mono linenums" id="md_lines">
+            <div id="memory_view">
+              <div class="span1 mono linenums" id="memory_lines">
               </div>
-              <div class="span7 mono editor_div" id="md_dump">
+              <div class="span7 mono editor_div" id="memory_dump">
               </div>
-              <div class="span1 mono linenums addr" id="md_unused">
+              <div class="span1 mono linenums addr" id="memory_unused">
               </div>
-              <div class="span3 mono dump" id="md_code">
+              <div class="span3 mono dump" id="memory_code">
               </div>
             </div>
           </div>
@@ -150,9 +150,9 @@ SUB PC, 1
             <h4>Registers:</h4>
             <table border=0 class="mono">
               <tr>
-                <td class="reg_name">PC:</td><td id="regPC" class="cur_pc">0</td>
-                <td class="reg_name">SP:</td><td id="regSP" class="cur_sp">0</td>
-                <td class="reg_name">IA:</td><td id="regIA" class="cur_ia">0</td>
+                <td class="reg_name">PC:</td><td id="regPC" class="r_pc">0</td>
+                <td class="reg_name">SP:</td><td id="regSP" class="r_sp">0</td>
+                <td class="reg_name">IA:</td><td id="regIA" class="r_ia">0</td>
               </tr>
               <tr>
                 <td class="reg_name">A:</td><td id="regA">0</td>

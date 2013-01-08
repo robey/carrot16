@@ -48,6 +48,32 @@ updateHighlight = (alsoScroll) ->
   else
     positionHighlight(null)
 
+@updateMemoryView = ->
+  if $("#tab2_content").css("display") == "none" then return
+  offset = $("#tab2_content").scrollTop() * 8
+  lines = $("#memory_lines")
+  dump = $("#memory_dump")
+  lines.css("top", offset / 8)
+  dump.css("top", offset / 8)
+  lines.empty()
+  dump.empty()
+  for addr in [offset ... Math.min(0x10000, offset + 256)]
+    if addr % 8 == 0
+      lines.append(pad(addr.toString(16), 4) + ":")
+      lines.append($(document.createElement("br")))
+    dump.append(" ")
+    value = (@emulator.memory[addr] or 0) & 0xffff
+    hex = $(document.createElement("span"))
+    hex.append(pad(value.toString(16), 4))
+    if addr == @emulator.registers.PC
+      hex.addClass("r_pc")
+    else if addr == @emulator.registers.SP
+      hex.addClass("r_sp")
+    else if addr != 0 and addr == @emulator.registers.IA
+      hex.addClass("r_ia")
+    dump.append(hex)
+    if addr % 8 == 7 then dump.append($(document.createElement("br")))
+
 # build up the dump panel (lines of "offset: words...")
 buildDump = ->
   $("#offsets").empty()
@@ -108,8 +134,8 @@ assemble = ->
 
 @updateViews = (options) ->
   # if @emulator.onFire then: show cool fire image.
-  updateHighlight(options.scroll)
-#  updateMemoryView();
+  updateHighlight(options?.scroll)
+  @updateMemoryView()
 #  updateRegisters();
 #  Screen.update(memory);
 #  document.getElementById("cycles").innerHTML = cycles;
@@ -120,6 +146,7 @@ assemble = ->
   $("#tab0_content").height($(window).height() - $("#tab0_content").position().top)
   $("#tab1_content").height($(window).height() - $("#tab1_content").position().top)
   $("#tab2_content").height(32 * 20 + 7)
+  @updateViews()
 
 @codeEdited = ->
   assemble()
@@ -139,6 +166,7 @@ assemble = ->
       tabContent.css("display", "none")
       tab.removeClass("tab_active")
       tab.addClass("tab_inactive")
+  @updateViews()
 
 @step = ->
   @emulator.step()

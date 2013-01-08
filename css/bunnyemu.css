@@ -124,17 +124,17 @@ a {
   background-color: transparent;
 }
 
-#md_view {
+#memory_view {
   position: relative;
   top: 0px;
   left: 0px;
   height: 8807px;
 }
-#md_lines {
+#memory_lines {
   position: relative;
   top: 0px;
 }
-#md_dump {
+#memory_dump {
   position: relative;
   top: 0px;
   left: 0px;
@@ -190,12 +190,16 @@ a {
   font-weight: bold;
   color: gray;
 }
-.cur_sp {
+.r_sp {
   background-color: #aaaaff;
   text-decoration: none;
 }
-.cur_pc {
+.r_pc {
   background-color: #aaffaa;
+  text-decoration: none;
+}
+.r_ia {
+  background-color: #ffaaaa;
   text-decoration: none;
 }
 .registers td.cycles {
