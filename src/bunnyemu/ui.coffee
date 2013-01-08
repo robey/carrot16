@@ -19,7 +19,7 @@ scrollToLine = (lineNumber) ->
   if not line? then return
   lineTop = line.offset().top
 
-  codeTab = $("#tab0_wrapper")
+  codeTab = $("#tab0_content")
   if codeTab.css("display") == "none" then return
   lineHeight = parseInt(codeTab.css("line-height"))
   log = $("#log")
@@ -117,9 +117,9 @@ assemble = ->
 
 @resized = ->
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
-  $("#tab0_wrapper").height($(window).height() - $("#tab0_wrapper").position().top)
-  $("#tab1_wrapper").height($(window).height() - $("#tab1_wrapper").position().top)
-  $("#tab2_wrapper").height(32 * 20 + 7)
+  $("#tab0_content").height($(window).height() - $("#tab0_content").position().top)
+  $("#tab1_content").height($(window).height() - $("#tab1_content").position().top)
+  $("#tab2_content").height(32 * 20 + 7)
 
 @codeEdited = ->
   assemble()
@@ -127,7 +127,7 @@ assemble = ->
 @toggleTab = (index) ->
   # save scroll position
   for i in [0...3]
-    tabContent = $("#tab#{i}_wrapper")
+    tabContent = $("#tab#{i}_content")
     tab = $("#tab#{i}")
     if tabContent.css("display") != "none" then @scrollTop[i] = tabContent.scrollTop()
     if i == index

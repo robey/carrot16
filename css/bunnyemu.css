@@ -35,7 +35,7 @@ a {
   font-size: 12pt;
   padding: 2px 7px;
   border-radius: 4px 4px 0px 0px;
-  margin: 0px 1px;
+  margin: 0px 2px;
   min-height: 0px;  /* override bootstrap */
 }
 .tab_active {
@@ -58,10 +58,10 @@ a {
   overflow-y: scroll;
   position: relative; /* so highlight line will work */  
 }
-#tab1_wrapper {
+#tab1_content {
   display: none;
 }
-#tab2_wrapper {
+#tab2_content {
   display: none;
   overflow-y: scroll;
   position: relative;
