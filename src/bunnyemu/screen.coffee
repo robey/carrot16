@@ -101,6 +101,7 @@ class Screen extends Hardware
           @image.data[(y * @DISPLAY_WIDTH * @PIXEL_SIZE + x) * 4 + i] = 0
         # alpha:
         @image.data[(y * @DISPLAY_WIDTH * @PIXEL_SIZE + x) * 4 + 3] = 0xff
+    @timings = []
     @update()
 
   blankOn: ->
@@ -140,6 +141,7 @@ class Screen extends Hardware
       @blankOn()
       return
 
+    startTime = Date.now()
     palette = @DEFAULT_PALETTE
     if @paletteMap > 0
       palette = []
@@ -188,6 +190,12 @@ class Screen extends Hardware
 
     color = palette[@borderColor]
     @screenElement.css("background-color", "#" + pad(color[0].toString(16), 2) + pad(color[1].toString(16), 2) + pad(color[2].toString(16), 2))
+
+    duration = Date.now() - startTime
+    @timings.push(duration)
+    if @timings.length > 25 then @timings.shift()
+    $("#log").css("display", "block")
+    $("#log").html("screen: " + @timings.join(" "))
 
 exports.Screen = Screen
 
