@@ -48,53 +48,13 @@
               </div>
             </div>
             <div class="span7 editor_div" id="codebox">
-              <textarea class="mono editor" id="code" onkeyup="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
-; your code here
-SET A, 99
-SET X, A
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 1
-SUB PC, 13
-SUB PC, 12
-SUB PC, 11
-SUB PC, 10
-SUB PC, 9
-SUB PC, 8
-SUB PC, 7
-SUB PC, 6
-SUB PC, 5
-SUB PC, 4
-SUB PC, 3
-SUB PC, 2
+              <textarea class="mono editor" id="code" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
+set a, 0
+set b, 0xe000
+hwi 0
+set [0xe000], 0xe068
+set [0xe001], 0xc069
+set [0xe002], 0x8007
 SUB PC, 1
 </textarea>
             </div>
@@ -132,6 +92,7 @@ SUB PC, 1
           <div class="screen_frame">
             <canvas id="screen" width="384" height="288"></canvas>
             <img id="loading_overlay" src="images/nya-elek.png" width="384" height="288" />
+            <img id="static_overlay" src="images/static.gif" width="384" height="288" />
           </div>
           <div class="notice">Keyboard input is available while the program is running.</div>
           <div class="row-fluid buttons">

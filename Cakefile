@@ -37,7 +37,8 @@ synctask = (name, description, f) ->
 ## -----
 
 emulatorFiles = [
-  "emulator"
+  "emulator",
+  "screen"
 ]
 
 synctask "build", "build javascript", ->

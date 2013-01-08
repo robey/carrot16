@@ -3,7 +3,6 @@
 @typingDelay = 250
 @typingTimer = null
 
-@emulator = new bunnyemu.Emulator()
 @breakpoints = {}
 @assembled = null
 @scrollTop = []
@@ -20,7 +19,7 @@ matchHeight = (dest, source) ->
 # scroll the code-view so that the currently-running line is visible.
 scrollToLine = (lineNumber) ->
   line = $("#ln#{lineNumber}")
-  if not line? then return
+  if (not line?) or (not line.offset()?) then return
   lineTop = line.offset().top
 
   codeTab = $("#tab0_content")
@@ -146,7 +145,7 @@ assemble = ->
   updateHighlight(options?.scroll)
   @updateMemoryView()
   updateRegisters()
-#  Screen.update(memory);
+  @screen.update(@emulator.memory)
 
 @resized = ->
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
@@ -196,13 +195,15 @@ assemble = ->
   assemble()
   @updateViews(scroll: true)
 
-$(document).ready ->
+$(document).ready =>
+  @emulator = new bunnyemu.Emulator()
+  @screen = new bunnyemu.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
+  @emulator.hardware.push(@screen)
+
   reset()
   $(window).resize (event) -> resized()
   resized()
 
-# ensure the monitor boot-screen displays for no longer than 1 second.
-setTimeout((-> $("#loading_overlay").css("display", "none")), 1000)
 
 
 #  window.localStorage.setItem("robey", "hello")

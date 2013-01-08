@@ -157,6 +157,13 @@ a {
   left: 0px;
   margin: 10px;
 }
+#static_overlay {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  margin: 10px;
+  display: none;  
+}
 .notice {
   marginx: 6px 0px 10px 0px;
   color: gray;
