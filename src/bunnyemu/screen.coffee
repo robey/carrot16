@@ -17,6 +17,9 @@ class Screen extends Hardware
   paletteMap: 0
   borderColor: 0
 
+  # how long to show static before the monitor is ready
+  STATIC_TIMER: 250
+
   DISPLAY_WIDTH: 128
   DISPLAY_HEIGHT: 96
   PIXEL_SIZE: 3
@@ -108,7 +111,7 @@ class Screen extends Hardware
 
   staticOn: ->
     @staticElement.css("display", "block")
-    setTimeout((=> @staticOff()), 500)
+    setTimeout((=> @staticOff()), @STATIC_TIMER)
 
   staticOff: ->
     @staticElement.css("display", "none")
