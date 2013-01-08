@@ -36,9 +36,23 @@ synctask = (name, description, f) ->
 
 ## -----
 
+emulatorFiles = [
+  "emulator"
+]
+
 synctask "build", "build javascript", ->
   run "mkdir -p lib"
   run "coffee -o lib -c src"
 
 synctask "test", "run unit tests", ->
   run "./node_modules/mocha/bin/mocha -R Progress --compilers coffee:coffee-script --colors"
+
+synctask "web", "build emulator into javascript for browsers", ->
+  run "mkdir -p js"
+  files = ("src/bunnyemu/" + x + ".coffee" for x in emulatorFiles)
+  run "coffee -o js -j emulator-x -c " + files.join(" ")
+  run 'echo "var exports = {};" > js/emulator.js'
+  # remove the "require" statements.
+  run 'grep -v " = require" js/emulator-x.js >> js/emulator.js'
+  run 'echo "var bunnyemu = exports; delete exports;" >> js/emulator.js'
+  run "rm -f js/emulator-x.js"

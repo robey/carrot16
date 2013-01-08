@@ -12,16 +12,22 @@ class Emulator
 
   # memory: an array of 65536 words (main memory)
   constructor: (memory) ->
-    @registers = { A: 0, B: 0, C: 0, X: 0, Y: 0, Z: 0, I: 0, J: 0, PC: 0, SP: 0, EX: 0, IA: 0 }
     if not memory then memory = []
     @memory = memory
     @hardware = []
+    @reset()
+
+  reset: ->
+    @registers = { A: 0, B: 0, C: 0, X: 0, Y: 0, Z: 0, I: 0, J: 0, PC: 0, SP: 0, EX: 0, IA: 0 }
     # if more than 256 interrupts queue up, we "catch fire".
     @onFire = false
     # we queue interrupts when in an interrupt handler. the queue is just interrupt ids.
     @queueing = false
     @interruptQueue = []
     @cycles = 0
+
+  clearMemory: ->
+    for i in [0 ... 0x10000] then if @memory[i] then @memory[i] = 0
 
   nextPC: ->
     rv = @memory[@registers.PC] or 0
@@ -57,6 +63,7 @@ class Emulator
 
   # execute one instruction at PC.
   step: ->
+    if @onFire then return
     if not @queueing then @triggerQueuedInterrupt()
 
     instruction = @nextPC()
@@ -65,6 +72,7 @@ class Emulator
     b = (instruction >> 5) & 0x1f
 
     # FIXME: BRK
+    # FIXME: track memory & registers that were read or written.
 
     if op == 0
       @stepSpecial(b, a)
