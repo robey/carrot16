@@ -2,6 +2,7 @@
 @emulator = new bunnyemu.Emulator()
 @breakpoints = {}
 @assembled = null
+@scrollTop = []
 
 pad = (num, width) ->
   num = num.toString()
@@ -122,6 +123,22 @@ assemble = ->
 
 @codeEdited = ->
   assemble()
+
+@toggleTab = (index) ->
+  # save scroll position
+  for i in [0...3]
+    tabContent = $("#tab#{i}_wrapper")
+    tab = $("#tab#{i}")
+    if tabContent.css("display") != "none" then @scrollTop[i] = tabContent.scrollTop()
+    if i == index
+      tabContent.css("display", "block")
+      tabContent.scrollTop(@scrollTop[i])
+      tab.addClass("tab_active")
+      tab.removeClass("tab_inactive")
+    else
+      tabContent.css("display", "none")
+      tab.removeClass("tab_active")
+      tab.addClass("tab_inactive")
 
 @step = ->
   @emulator.step()
