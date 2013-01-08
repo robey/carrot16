@@ -180,18 +180,49 @@ assemble = ->
       tab.addClass("tab_inactive")
   @updateViews()
 
+@runTimer = null
+@run = ->
+  if @runTimer?
+    @stopRun()
+    return
+  # Clock.start()
+  @runTimer = setInterval((=> @clockTick()), 50)
+  $("#button_run").html("&#215; Stop (F5)")
+
+@stopRun = ->
+  # Clock.stop()
+  clearInterval(@runTimer)
+  @runTimer = null
+  $("#button_run").html("&#8595; Run (F5)")
+  @updateViews(scroll: true)
+
+@clockTick = ->
+  startCycles = @emulator.cycles
+  loop
+    if not @runTimer? then return
+    @emulator.step()
+    if not @runTimer? then return
+    if @emulator.onFire
+      @stopRun()
+      return
+    if @breakpoints[@assembled.memToLine(@emulator.registers.PC)]
+      @stopRun()
+      return
+    if @emulator.cycles > startCycles + 5213
+      @updateViews()
+      return
+
 @step = ->
+  if @runTimer?
+    @stopRun()
+    return
   @emulator.step()
   @updateViews(scroll: true)
 
 @reset = ->
   @emulator.reset()
-
+  @screen.reset()
   # keypointer = 0;
-  # Screen.MAP_SCREEN = 0x8000; // for backward compatability... will be reset to 0 in future
-  # Screen.MAP_FONT = 0x8180;
-  # Screen.MAP_PALETTE = 0;
-  # Screen.BORDER_COLOR = 0;
   assemble()
   @updateViews(scroll: true)
 
