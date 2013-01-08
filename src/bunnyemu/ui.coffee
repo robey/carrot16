@@ -1,4 +1,8 @@
 
+# typing has to pause for this long (in milliseconds) before we'll try to recompile.
+@typingDelay = 250
+@typingTimer = null
+
 @emulator = new bunnyemu.Emulator()
 @breakpoints = {}
 @assembled = null
@@ -47,6 +51,11 @@ updateHighlight = (alsoScroll) ->
     if (alsoScroll) then scrollToLine(lineNumber)
   else
     positionHighlight(null)
+
+updateRegisters = ->
+  for r, v of @emulator.registers
+    $("#reg#{r}").html(pad(v.toString(16), 4))
+  $("#cycles").html(@emulator.cycles)
 
 @updateMemoryView = ->
   if $("#tab2_content").css("display") == "none" then return
@@ -136,10 +145,8 @@ assemble = ->
   # if @emulator.onFire then: show cool fire image.
   updateHighlight(options?.scroll)
   @updateMemoryView()
-#  updateRegisters();
+  updateRegisters()
 #  Screen.update(memory);
-#  document.getElementById("cycles").innerHTML = cycles;
-#  resizeTabs();
 
 @resized = ->
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
@@ -149,6 +156,11 @@ assemble = ->
   @updateViews()
 
 @codeEdited = ->
+  if @typingTimer? then clearTimeout(@typingTimer)
+  @typingTimer = setTimeout(@codeChanged, @typingDelay)
+
+@codeChanged = ->
+  @typingTimer = null
   assemble()
 
 @toggleTab = (index) ->
@@ -181,7 +193,7 @@ assemble = ->
   # Screen.MAP_PALETTE = 0;
   # Screen.BORDER_COLOR = 0;
   assemble()
-  updateHighlight(true)
+  @updateViews(scroll: true)
 
 $(document).ready ->
   reset()
