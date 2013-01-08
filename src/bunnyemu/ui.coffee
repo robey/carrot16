@@ -126,7 +126,7 @@ assemble = ->
   # update UI
   buildDump()
   matchHeight($("#code"), $("#linenums"))
-
+  @resized()
 
 # ----- things that must be accessible from html (globals)
 
@@ -150,8 +150,9 @@ assemble = ->
 
 @resized = ->
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
-  $("#tab0_content").height($(window).height() - $("#tab0_content").position().top)
-  $("#tab1_content").height($(window).height() - $("#tab1_content").position().top)
+  extra = if $("#log").css("display") == "none" then 0 else $("#log").outerHeight(true)
+  $("#tab0_content").height($(window).height() - $("#tab0_content").position().top - extra)
+  $("#tab1_content").height($(window).height() - $("#tab1_content").position().top - extra)
   $("#tab2_content").height(32 * 20 + 7)
   @updateViews()
 
