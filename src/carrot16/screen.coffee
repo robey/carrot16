@@ -18,7 +18,7 @@ class Screen extends Hardware
   borderColor: 0
 
   # how long to show static before the monitor is ready
-  STATIC_TIMER: 250
+  STATIC_TIMER: 500
 
   DISPLAY_WIDTH: 128
   DISPLAY_HEIGHT: 96

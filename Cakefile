@@ -51,10 +51,10 @@ synctask "test", "run unit tests", ->
 
 synctask "web", "build emulator into javascript for browsers", ->
   run "mkdir -p js"
-  files = ("src/bunnyemu/" + x + ".coffee" for x in emulatorFiles)
+  files = ("src/carrot16/" + x + ".coffee" for x in emulatorFiles)
   run "coffee -o js -j emulator-x -c " + files.join(" ")
   run 'echo "var exports = {};" > js/emulator.js'
   # remove the "require" statements.
   run 'grep -v " = require" js/emulator-x.js >> js/emulator.js'
-  run 'echo "var bunnyemu = exports; delete exports;" >> js/emulator.js'
+  run 'echo "var carrot16 = exports; delete exports;" >> js/emulator.js'
   run "rm -f js/emulator-x.js"

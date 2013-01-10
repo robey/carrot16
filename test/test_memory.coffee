@@ -1,24 +1,24 @@
 should = require 'should'
-bunnyemu = require '../src/bunnyemu'
+carrot16 = require '../src/carrot16'
 
 util = require "util"
 
 describe "RangeMap", ->
   it "finds a single value", ->
-    m = new bunnyemu.RangeMap()
+    m = new carrot16.RangeMap()
     m.add(10, 11, "hello")
     m.get(9).should.eql([])
     m.get(10).should.eql([ "hello" ])
     m.get(11).should.eql([])
 
   it "can handle 2 identical ranges", ->
-    m = new bunnyemu.RangeMap()
+    m = new carrot16.RangeMap()
     h = m.add(10, 11, "hello")
     g = m.add(10, 11, "goodbye")
     m.get(10).should.eql([ "hello", "goodbye" ])
 
   it "can remove ranges", ->
-    m = new bunnyemu.RangeMap()
+    m = new carrot16.RangeMap()
     h = m.add(10, 11, "hello")
     g = m.add(10, 11, "goodbye")
     m.get(10).should.eql([ "hello", "goodbye" ])
@@ -28,7 +28,7 @@ describe "RangeMap", ->
     m.get(10).should.eql([])
 
   it "can have several overlapping and non-overlapping ranges", ->
-    m = new bunnyemu.RangeMap()
+    m = new carrot16.RangeMap()
     m.add(10, 30, "alpha")
     m.add(20, 32, "beta")
     m.add(15, 20, "gamma")
@@ -48,28 +48,28 @@ describe "RangeMap", ->
 
 describe "Memory", ->
   it "starts blank", ->
-    m = new bunnyemu.Memory()
+    m = new carrot16.Memory()
     m.get(10).should.eql(0)
 
   it "get and set", ->
-    m = new bunnyemu.Memory()
+    m = new carrot16.Memory()
     m.set(10, 20)
     m.get(10).should.eql(20)
 
   it "clear", ->
-    m = new bunnyemu.Memory()
+    m = new carrot16.Memory()
     m.set(10, 20)
     m.get(10).should.eql(20)
     m.clear()
     m.get(10).should.eql(0)
 
   it "16 bit", ->
-    m = new bunnyemu.Memory()
+    m = new carrot16.Memory()
     m.set(10, 0x12345)
     m.get(10).should.eql(0x2345)
 
   it "triggers read watches", ->
-    m = new bunnyemu.Memory()
+    m = new carrot16.Memory()
     reads = []
     watch = m.watchReads 10, 20, (addr) -> reads.push(addr)
     m.get(5).should.equal(0)
@@ -85,7 +85,7 @@ describe "Memory", ->
     reads.should.eql([ 10, 10 ])
 
   it "triggers write watches", ->
-    m = new bunnyemu.Memory()
+    m = new carrot16.Memory()
     writes = []
     watch = m.watchWrites 10, 20, (addr) -> writes.push(addr)
     m.set(5, 1)

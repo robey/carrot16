@@ -1,5 +1,5 @@
 should = require 'should'
-bunnyemu = require '../src/bunnyemu'
+carrot16 = require '../src/carrot16'
 
 util = require "util"
 
@@ -20,7 +20,7 @@ preloadSpecial = (e, op, a) -> preload(e, 0, op, a)
   
 describe "Emulator", ->
   it "nextPC", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     e.registers.PC = 0x100
     e.memory.set(0x100, 0x8888)
     e.nextPC().should.equal(0x8888)
@@ -31,7 +31,7 @@ describe "Emulator", ->
     e.registers.PC.should.equal(0)
 
   it "push", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     e.registers.SP = 0x100
     e.push(0x1234)
     e.registers.SP.should.equal(0xff)
@@ -42,7 +42,7 @@ describe "Emulator", ->
     e.memory.get(0xffff).should.equal(0x9999)
 
   it "getPush", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     e.registers.SP = 0x100
     e.memory.set(0xff, 0x1234)
     e.getPush().should.equal(0x1234)
@@ -53,7 +53,7 @@ describe "Emulator", ->
     e.registers.SP.should.equal(0xffff)
 
   it "pop", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     e.registers.SP = 0
     e.memory.set(0, 0x1234)
     e.pop().should.equal(0x1234)
@@ -64,14 +64,14 @@ describe "Emulator", ->
     e.registers.SP.should.equal(0)
 
   it "readRegister", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     e.registers.X = 20
     e.registers.J = 24
     e.readRegister(3).should.equal(20)
     e.readRegister(7).should.equal(24)
 
   it "skip", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     # skip normal op
     e.registers.PC = 0
     e.memory.set(0, pack(0, 0, 0))
@@ -96,7 +96,7 @@ describe "Emulator", ->
     e.registers.PC.should.equal(3)
 
   describe "fetchOperand", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     it "R", ->
       e.registers.A = 9
       e.fetchOperand(0).should.equal(9)
@@ -153,7 +153,7 @@ describe "Emulator", ->
       e.fetchOperand(0x1f).should.equal(600)
 
   describe "storeOperand", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
     it "R", ->
       e.storeOperand(0, 9)
       e.registers.A.should.equal(9)
@@ -203,8 +203,8 @@ describe "Emulator", ->
       e.memory.get(600).should.equal(0x2222)
 
   describe "special ops", ->
-    e = new bunnyemu.Emulator()
-    e.hardware = [ new bunnyemu.Hardware(0x22334455, 2, 0x66779988), new bunnyemu.Hardware(0x12341234, 1, 0x56785678) ]
+    e = new carrot16.Emulator()
+    e.hardware = [ new carrot16.Hardware(0x22334455, 2, 0x66779988), new carrot16.Hardware(0x12341234, 1, 0x56785678) ]
 
     it "JSR", ->
       preloadSpecial(e, 0x01, 0)
@@ -299,7 +299,7 @@ describe "Emulator", ->
       e.cycles.should.equal(34)
 
   describe "binary ops", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
 
     it "SET", ->
       preload(e, 0x01, 0x03, 0x04)
@@ -433,7 +433,7 @@ describe "Emulator", ->
       e.registers.EX.should.equal(0xffff)
 
   describe "conditional ops", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
 
     it "IFB", ->
       preload(e, 0x10, 0x03, 0x04)
@@ -532,7 +532,7 @@ describe "Emulator", ->
       e.registers.PC.should.equal(0x12)
 
   describe "block move ops", ->
-    e = new bunnyemu.Emulator()
+    e = new carrot16.Emulator()
 
     it "STI", ->
       preload(e, 0x1e, 0x0e, 0x0f)

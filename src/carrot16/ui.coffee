@@ -255,8 +255,8 @@ assemble = ->
   @updateViews(scroll: true)
 
 $(document).ready =>
-  @emulator = new bunnyemu.Emulator()
-  @screen = new bunnyemu.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
+  @emulator = new carrot16.Emulator()
+  @screen = new carrot16.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
   @emulator.hardware.push(@screen)
   @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
   @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
