@@ -158,6 +158,8 @@ a {
 
 .screen_frame {
   position: relative;
+  /* exactly 10px bigger than the screen on each side */
+  width: 404px;
 }
 #screen {
   background-color: black;
