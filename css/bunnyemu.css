@@ -26,6 +26,14 @@ a {
   overflow-y: no-display;
 }
 
+#header {
+  padding: 1em;
+  padding-bottom: 1.5em;
+}
+.header_image {
+  height: 48px;
+}
+
 .tabs {
   margin-left: 0px !important;
   padding: 0px 10px;
@@ -143,6 +151,10 @@ a {
   padding-top: 3px;
   padding-left: 0.5em;
 }
+.memory_key {
+  margin: 0px;
+  padding: 2px;
+}
 
 .screen_frame {
   position: relative;
@@ -208,6 +220,15 @@ a {
 }
 .r_ia {
   background-color: #ffaaaa;
+  text-decoration: none;
+}
+.memory_read {
+  color: #f00;
+  text-decoration: none;
+}
+.memory_write {
+  background-color: #000;
+  color: #fcc;
   text-decoration: none;
 }
 .registers td.cycles {

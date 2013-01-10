@@ -21,7 +21,7 @@
   </head>
   <body>
     <div id="header">
-      <h3>bunnyemu: DCPU-16 IDE &amp; Emulator</h3>
+      <img src="images/carrot16.jpg" class="header_image">
     </div>
 
     <div class="noscroll" id="body">
@@ -50,11 +50,12 @@
             <div class="span7 editor_div" id="codebox">
               <textarea class="mono editor" id="code" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
 set a, 0
-set b, 0xe000
+set b, 0x80
 hwi 0
-set [0xe000], 0xe068
-set [0xe001], 0xc069
-set [0xe002], 0x8007
+set [0x80], 0xe068
+set [0x81], 0xc069
+set [0x82], 0x8007
+set [0x83], [0x80]
 SUB PC, 1
 </textarea>
             </div>
@@ -108,7 +109,6 @@ SUB PC, 1
           </div>
 
           <div class="registers">
-            <h4>Registers:</h4>
             <table border=0 class="mono">
               <tr>
                 <td class="reg_name">PC</td><td id="regPC" class="r_pc">0</td>
@@ -128,6 +128,7 @@ SUB PC, 1
               <tr>
                 <td class="reg_name">I</td><td id="regI">0</td>
                 <td class="reg_name">J</td><td id="regJ">0</td>
+                <td class="reg_name"></td>
               </tr>
               <tr>
                 <td class="reg_name">EX</td><td id="regEX">0</td>
