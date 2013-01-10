@@ -9,6 +9,14 @@
 @memoryReads = []
 @memoryWrites = []
 
+# fraction of the time slice we actually spent running the emulator
+@cpuHeat = 0.0
+
+# cpu timings
+@TIME_SLICE_MSEC = 50
+@CLOCK_SPEED_HZ = 100000
+@CYCLES_PER_SLICE = Math.floor(@CLOCK_SPEED_HZ * 1.0 / @TIME_SLICE_MSEC)
+
 pad = (num, width) ->
   num = num.toString()
   len = num.length
@@ -192,7 +200,7 @@ assemble = ->
     @stopRun()
     return
   # Clock.start()
-  @runTimer = setInterval((=> @clockTick()), 50)
+  @runTimer = setInterval((=> @clockTick()), @TIME_SLICE_MSEC)
   $("#button_run").html("&#215; Stop (F5)")
 
 @stopRun = ->
@@ -203,10 +211,8 @@ assemble = ->
   @updateViews(scroll: true)
 
 @clockTick = ->
-  startTime = Date.now()
   startCycles = @emulator.cycles
-  @memoryReads = []
-  @memoryWrites = []
+  startTime = @prepareRun()
   loop
     if not @runTimer? then return
     @emulator.step()
@@ -217,9 +223,8 @@ assemble = ->
     if @breakpoints[@assembled.memToLine(@emulator.registers.PC)]
       @stopRun()
       return
-    if @emulator.cycles > startCycles + 5213
-      duration = Date.now() - startTime
-      @screen.timings.push(duration)
+    if @emulator.cycles > startCycles + @CYCLES_PER_SLICE
+      @cleanupRun(startTime)
       @updateViews()
       return
 
@@ -227,13 +232,18 @@ assemble = ->
   if @runTimer?
     @stopRun()
     return
-  startTime = Date.now()
+  startTime = @prepareRun()
+  @emulator.step()
+  @cleanupRun(startTime)
+  @updateViews(scroll: true)
+
+@prepareRun = ->
   @memoryReads = []
   @memoryWrites = []
-  @emulator.step()
-  duration = Date.now() - startTime
-  @screen.timings.push(duration)
-  @updateViews(scroll: true)
+  Date.now()
+
+@cleanupRun = (startTime) ->
+  @cpuHeat = (Date.now() - startTime) * 1.0 / @TIME_SLICE_MSEC
 
 @reset = ->
   @memoryReads = []

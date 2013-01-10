@@ -38,8 +38,6 @@ class Memory
     for i in [0 ... 0x10000] then if @memory[i] then @memory[i] = 0
 
   flash: (buffer) ->
-    $("#log").css("display", "block")
-    $("#log").append((i for i in buffer).join(",") + "!")
     @memory = buffer
 
   get: (n) ->
