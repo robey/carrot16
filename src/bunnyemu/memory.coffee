@@ -8,33 +8,6 @@ class RangeMap
     # internally, entries are (id -> range) and (id -> obj)
     @rangeMap = {}
     @objMap = {}
-    # sorted caches for quick searching:
-    @clearCache()
-  
-  clearCache: ->
-    @startList = null
-    @endList = null
-
-  buildCache: ->
-    @startList = ([ k[0], v ] for k, v of @rangeMap).sort (a, b) -> a[0] - b[0]
-    @endList = ([ k[1], v ] for k, v of @rangeMap).sort (a, b) -> a[0] - b[0]
-
-  intersect: (a, b) ->
-    a = a.sort()
-    b = b.sort()
-    rv = []
-    ai = 0
-    bi = 0
-    while ai < a.length and bi < b.length
-      if a[ai] < b[bi]
-        ai += 1
-      else if a[ai] > b[bi]
-        bi += 1
-      else
-        rv.push(a[ai])
-        ai += 1
-        bi += 1
-    rv
 
   # returns a key which may be used to remove the range later.
   add: (start, end, obj) ->
@@ -42,27 +15,15 @@ class RangeMap
     @id += 1
     @rangeMap[id] = [ start, end ]
     @objMap[id] = obj
-    @clearCache()
     id
 
+  remove: (id) ->
+    delete @rangeMap[id]
+    delete @objMap[id]
+
   get: (n) ->
-    if not @startList? then @buildCache()
-    if @startList.length == 0 then return []
-    rv1 = []
-    index = 0
-    while index < @startList.length and @startList[index][0] <= n
-      rv1.push @startList[index][1]
-      index += 1
-    if rv1.length == 0 then return []
-    rv2 = []
-    index = @endList.length - 1
-    while index >= 0 and @endList[index][0] > n
-      rv1.push @endList[index][1]
-      index -= 1
-    if rv2.length == 0 then return []
-    @intersect(rv1, rv2)
-
-
+    ids = (k for k, v of @rangeMap when n >= v[0] and n < v[1])
+    (@objMap[id] for id in ids)
 
 
 # memory isn't technically a piece of "hardware" on the DCPU, but lots of
@@ -70,9 +31,40 @@ class RangeMap
 class Memory
   constructor: ->
     @memory = []
+    @readWatches = new RangeMap()
+    @writeWatches = new RangeMap()
 
   clear: ->
     for i in [0 ... 0x10000] then if @memory[i] then @memory[i] = 0
+
+  flash: (buffer) ->
+    $("#log").css("display", "block")
+    $("#log").append((i for i in buffer).join(",") + "!")
+    @memory = buffer
+
+  get: (n) ->
+    @readWatches.get(n).map (f) => f(n)
+    @peek(n)
+
+  peek: (n) ->
+    (@memory[n & 0xffff] or 0) & 0xffff
+
+  set: (n, value) ->
+    @writeWatches.get(n).map (f) => f(n)
+    @memory[n & 0xffff] = (value & 0xffff)
+
+  watchReads: (start, end, callback) ->
+    @readWatches.add(start, end, callback)
+
+  unwatchReads: (id) ->
+    @readWatches.remove(id)
+
+  watchWrites: (start, end, callback) ->
+    @writeWatches.add(start, end, callback)
+
+  unwatchWrites: (id) ->
+    @writeWatches.remove(id)
+
 
 exports.RangeMap = RangeMap
 exports.Memory = Memory

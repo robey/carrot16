@@ -6,6 +6,8 @@
 @breakpoints = {}
 @assembled = null
 @scrollTop = []
+@memoryReads = []
+@memoryWrites = []
 
 pad = (num, width) ->
   num = num.toString()
@@ -70,7 +72,7 @@ updateRegisters = ->
       lines.append(pad(addr.toString(16), 4) + ":")
       lines.append($(document.createElement("br")))
     dump.append(" ")
-    value = (@emulator.memory[addr] or 0) & 0xffff
+    value = @emulator.memory.peek(addr)
     hex = $(document.createElement("span"))
     hex.append(pad(value.toString(16), 4))
     if addr == @emulator.registers.PC
@@ -79,6 +81,10 @@ updateRegisters = ->
       hex.addClass("r_sp")
     else if addr != 0 and addr == @emulator.registers.IA
       hex.addClass("r_ia")
+    else if addr in @memoryWrites
+      hex.addClass("memory_write")
+    else if addr in @memoryReads
+      hex.addClass("memory_read")
     dump.append(hex)
     if addr % 8 == 7 then dump.append($(document.createElement("br")))
 
@@ -107,7 +113,6 @@ assemble = ->
   $("#log").css("display", "none")
 
   emulator.clearMemory()
-#  Screen.resetFont(memory)
 
   logger = (lineno, pos, message) ->
     $("#log").css("display", "block")
@@ -117,7 +122,8 @@ assemble = ->
   @assembled = asm.compile(lines)
 
   if @assembled.errorCount == 0
-    @assembled.createImage(@emulator.memory)
+    buffer = @assembled.createImage()
+    @emulator.memory.flash(buffer)
     # turn off breakpoints that aren't code anymore.
     for line, isSet of @breakpoints #when isSet
       @setBreakpoint(line, isSet)
@@ -197,7 +203,10 @@ assemble = ->
   @updateViews(scroll: true)
 
 @clockTick = ->
+  startTime = Date.now()
   startCycles = @emulator.cycles
+  @memoryReads = []
+  @memoryWrites = []
   loop
     if not @runTimer? then return
     @emulator.step()
@@ -209,6 +218,8 @@ assemble = ->
       @stopRun()
       return
     if @emulator.cycles > startCycles + 5213
+      duration = Date.now() - startTime
+      @screen.timings.push(duration)
       @updateViews()
       return
 
@@ -216,10 +227,17 @@ assemble = ->
   if @runTimer?
     @stopRun()
     return
+  startTime = Date.now()
+  @memoryReads = []
+  @memoryWrites = []
   @emulator.step()
+  duration = Date.now() - startTime
+  @screen.timings.push(duration)
   @updateViews(scroll: true)
 
 @reset = ->
+  @memoryReads = []
+  @memoryWrites = []
   @emulator.reset()
   @screen.reset()
   # keypointer = 0;
@@ -230,6 +248,8 @@ $(document).ready =>
   @emulator = new bunnyemu.Emulator()
   @screen = new bunnyemu.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
   @emulator.hardware.push(@screen)
+  @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
+  @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
 
   reset()
   $(window).resize (event) -> resized()

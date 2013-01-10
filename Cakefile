@@ -38,6 +38,7 @@ synctask = (name, description, f) ->
 
 emulatorFiles = [
   "emulator",
+  "memory",
   "screen"
 ]
 

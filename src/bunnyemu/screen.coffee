@@ -146,7 +146,7 @@ class Screen extends Hardware
     if @paletteMap > 0
       palette = []
       for i in [@paletteMap ... @paletteMap + 16]
-        color = memory[i & 0xffff] & 0xffff
+        color = memory.peek(i)
         palette.push([
           ((color >> 8) & 0xf) << 4,
           ((color >> 4) & 0xf) << 4,
@@ -159,7 +159,7 @@ class Screen extends Hardware
     $("#log").empty()
     for y in [0 ... @TEXT_HEIGHT]
       for x in [0 ... @TEXT_WIDTH]
-        cell = memory[map & 0xffff]
+        cell = memory.peek(map)
         fc = palette[(cell >> 12) & 0xf]
         bc = palette[(cell >> 8) & 0xf]
         fontOffset = (cell & 0x7f) << 1
