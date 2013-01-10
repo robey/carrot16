@@ -65,6 +65,17 @@ updateRegisters = ->
   for r, v of @emulator.registers
     $("#reg#{r}").html(pad(v.toString(16), 4))
   $("#cycles").html(@emulator.cycles)
+  # update cpu heat meter
+  lowColor = [ 127, 0, 0 ]
+  hiColor = [ 255, 0, 0 ]
+  # my kingdom for Array.zip
+  color = [0...3].map (i) =>
+    Math.floor(lowColor[i] + @cpuHeat * (hiColor[i] - lowColor[i]))
+  canvas = $("#cpu_heat")[0].getContext("2d")
+  canvas.fillStyle = "#fff"
+  canvas.fillRect(0, 0, 1, 100)
+  canvas.fillStyle = "rgb(#{color[0]},#{color[1]},#{color[2]})"
+  canvas.fillRect(0, Math.floor(100 * (1.0 - @cpuHeat)), 1, 100)
 
 @updateMemoryView = ->
   if $("#tab2_content").css("display") == "none" then return
@@ -167,6 +178,8 @@ assemble = ->
   $("#tab0_content").height($(window).height() - $("#tab0_content").position().top - extra)
   $("#tab1_content").height($(window).height() - $("#tab1_content").position().top - extra)
   $("#tab2_content").height(32 * 20 + 7)
+  # compensate for extra ceremonial baggage chrome puts around a textarea
+  $("#code").outerWidth($("#codebox").width())
   @updateViews()
 
 @codeEdited = ->
@@ -223,7 +236,7 @@ assemble = ->
     if @breakpoints[@assembled.memToLine(@emulator.registers.PC)]
       @stopRun()
       return
-    if @emulator.cycles > startCycles + @CYCLES_PER_SLICE
+    if @emulator.cycles >= startCycles + @CYCLES_PER_SLICE
       @cleanupRun(startTime)
       @updateViews()
       return
@@ -248,6 +261,7 @@ assemble = ->
 @reset = ->
   @memoryReads = []
   @memoryWrites = []
+  @cpuHeat = 0.0
   @emulator.reset()
   @screen.reset()
   # keypointer = 0;
