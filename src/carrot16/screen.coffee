@@ -17,6 +17,10 @@ class Screen extends Hardware
   paletteMap: 0
   borderColor: 0
 
+  # so annoying.
+  blinking: false
+  showingBlink: true
+
   # how long to show static before the monitor is ready
   STATIC_TIMER: 500
 
@@ -77,6 +81,7 @@ class Screen extends Hardware
     @screenMapWatch = null
     @screenMapDirty = {}
     @reset()
+    setInterval((=> @blink()), 500)
 
   reset: ->
     @screenMap = 0
@@ -92,6 +97,10 @@ class Screen extends Hardware
         @image.data[(y * @DISPLAY_WIDTH * @PIXEL_SIZE + x) * 4 + 3] = 0xff
     @invalidate()
     @update()
+
+  blink: ->
+    @showingBlink = not @showingBlink
+    if @blinking then @invalidate()
 
   blankOn: ->
     @loadingElement.css("display", "block")
@@ -167,19 +176,21 @@ class Screen extends Hardware
 
     lineSize = @DISPLAY_WIDTH * @PIXEL_SIZE * 4
     touched = false
+    @blinking = false
     for y in [0 ... @TEXT_HEIGHT]
       for x in [0 ... @TEXT_WIDTH]
         map = @screenMap + y * @TEXT_WIDTH + x
-        continue if not @screenMapDirty[map]
         cell = memory.peek(map)
         fc = palette[(cell >> 12) & 0xf]
         bc = palette[(cell >> 8) & 0xf]
+        blink = (cell & 0x80) != 0
         fontOffset = (cell & 0x7f) << 1
+        if blink then @blinking = true
+        continue if not @screenMapDirty[map]
         fontWord = if @fontMap == 0
           (@DEFAULT_FONT[fontOffset] << 16) | @DEFAULT_FONT[fontOffset + 1]
         else
           (memory.peek(@fontMap + fontOffset) << 16) | memory.peek(@fontMap + fontOffset + 1)
-        blink = (cell & 0x80) != 0
 
         # "blit" the character out.
         touched = true
@@ -188,7 +199,7 @@ class Screen extends Hardware
           xbase = (x * @CELL_WIDTH + cx) * @PIXEL_SIZE
           for cy in [0 ... @CELL_HEIGHT]
             ybase = ((y + 1) * @CELL_HEIGHT - cy - 1) * @PIXEL_SIZE
-            color = if (fontWord & bit) == bit then fc else bc
+            color = if (fontWord & bit) == bit and not (@blinking and not @showingBlink) then fc else bc
             for px in [0 ... @PIXEL_SIZE]
               for py in [0 ... @PIXEL_SIZE]
                 offset = (ybase + py) * lineSize + ((xbase + px) * 4)

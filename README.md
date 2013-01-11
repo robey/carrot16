@@ -7,7 +7,3 @@ to-do
 
 - disassembler
 
-- screen: blink doesn't work
-
-- screen: doesn't support all interrupts
-

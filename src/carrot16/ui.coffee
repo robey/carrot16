@@ -191,6 +191,8 @@ assemble = ->
 
 @codeChanged = ->
   @typingTimer = null
+  @emulator.reset()
+  @screen.reset()
   assemble()
 
 @toggleTab = (index) ->
