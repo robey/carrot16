@@ -30,22 +30,8 @@ class Screen extends Hardware
   CELL_HEIGHT: 8
 
   DEFAULT_PALETTE: [
-    [0x00, 0x00, 0x00, 0xff],
-    [0x00, 0x00, 0xaa, 0xff],
-    [0x00, 0xaa, 0x00, 0xff],
-    [0x00, 0xaa, 0xaa, 0xff],
-    [0xaa, 0x00, 0x00, 0xff],
-    [0xaa, 0x00, 0xaa, 0xff],
-    [0xaa, 0x55, 0x00, 0xff],
-    [0xaa, 0xaa, 0xaa, 0xff],
-    [0x55, 0x55, 0x55, 0xff],
-    [0x55, 0x55, 0xff, 0xff],
-    [0x55, 0xff, 0x55, 0xff],
-    [0x55, 0xff, 0xff, 0xff],
-    [0xff, 0x55, 0x55, 0xff],
-    [0xff, 0x55, 0xff, 0xff],
-    [0xff, 0xff, 0x55, 0xff],
-    [0xff, 0xff, 0xff, 0xff]
+    0x000, 0x00a, 0x0a0, 0x0aa, 0xa00, 0xa0a, 0xa50, 0xaaa,
+    0x555, 0x55f, 0x5f5, 0x5ff, 0xf55, 0xf5f, 0xff5, 0xfff
   ]
 
   # default font by Notch
@@ -163,7 +149,8 @@ class Screen extends Hardware
         256
       when 5 # MEM_DUMP_PALETTE
         addr = emulator.registers.B
-        # FIXME
+        for i in [0 ... 16]
+          emulator.memory.set(addr + i, if @paletteMap == 0 then @DEFAULT_PALETTE[i] else emulator.memory.peek(@paletteMap + i))
         16        
 
   update: (memory) ->
@@ -173,21 +160,16 @@ class Screen extends Hardware
 
     palette = @DEFAULT_PALETTE
     if @paletteMap > 0
-      palette = []
-      for i in [@paletteMap ... @paletteMap + 16]
-        color = memory.peek(i)
-        palette.push([
-          ((color >> 8) & 0xf) << 4,
-          ((color >> 4) & 0xf) << 4,
-          ((color)      & 0xf) << 4,
-          0xff
-        ])
+      palette = (memory.peek(i) for i in [@paletteMap ... @paletteMap + 16])
+
+    color = palette[@borderColor]
+    @screenElement.css("background-color", "#" + pad(color.toString(16), 3))
 
     lineSize = @DISPLAY_WIDTH * @PIXEL_SIZE * 4
     touched = false
     for y in [0 ... @TEXT_HEIGHT]
       for x in [0 ... @TEXT_WIDTH]
-        map = @screenMap + y * @TEXT_HEIGHT + x
+        map = @screenMap + y * @TEXT_WIDTH + x
         continue if not @screenMapDirty[map]
         cell = memory.peek(map)
         fc = palette[(cell >> 12) & 0xf]
@@ -210,17 +192,14 @@ class Screen extends Hardware
             for px in [0 ... @PIXEL_SIZE]
               for py in [0 ... @PIXEL_SIZE]
                 offset = (ybase + py) * lineSize + ((xbase + px) * 4)
-                @image.data[offset + 0] = color[0]
-                @image.data[offset + 1] = color[1]
-                @image.data[offset + 2] = color[2]
-                @image.data[offset + 3] = color[3]
+                @image.data[offset + 0] = ((color & 0xf00) >> 8) * 17
+                @image.data[offset + 1] = ((color & 0xf0) >> 4) * 17
+                @image.data[offset + 2] = (color & 0xf) * 17
+                @image.data[offset + 3] = 0xff # alpha
             bit = (bit >> 1) & 0x7fffffff
         @screenMapDirty[map] = false
 
     if touched then @screen.putImageData(@image, 0, 0)
-
-    color = palette[@borderColor]
-    @screenElement.css("background-color", "rgb(#{color[0]},#{color[1]},#{color[2]})")
 
 
 exports.Screen = Screen
