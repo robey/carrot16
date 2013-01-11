@@ -223,11 +223,12 @@ assemble = ->
   # Clock.stop()
   clearInterval(@runTimer)
   @runTimer = null
+  @lastCycles = null
   $("#button_run").html("&#8595; Run (F5)")
   @updateViews(scroll: true)
 
 @clockTick = ->
-  startCycles = @emulator.cycles
+  if not @lastCycles? then @lastCycles = @emulator.cycles
   startTime = @prepareRun()
   loop
     if not @runTimer? then return
@@ -239,7 +240,10 @@ assemble = ->
     if @breakpoints[@assembled.memToLine(@emulator.registers.PC)]
       @stopRun()
       return
-    if @emulator.cycles >= startCycles + @CYCLES_PER_SLICE
+    if @emulator.cycles >= @lastCycles + @CYCLES_PER_SLICE
+      # funny math here is because we might have done more cycles than we
+      # were supposed to. so we want them to be credited to the next slice.
+      @lastCycles += @CYCLES_PER_SLICE
       @cleanupRun(startTime)
       @updateViews()
       return
