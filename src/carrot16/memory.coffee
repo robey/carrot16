@@ -22,9 +22,10 @@ class RangeMap
     delete @objMap[id]
 
   get: (n) ->
-    ids = (k for k, v of @rangeMap when n >= v[0] and n < v[1])
-    (@objMap[id] for id in ids)
-
+    objs = []
+    for k, v of @rangeMap
+      if n >= v[0] and n < v[1] then objs.push(@objMap[k])
+    objs
 
 # memory isn't technically a piece of "hardware" on the DCPU, but lots of
 # things touch it, so it's convenient to abstract it out.
