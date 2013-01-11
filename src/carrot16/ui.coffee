@@ -212,6 +212,27 @@ assemble = ->
       tab.addClass("tab_inactive")
   @updateViews()
 
+@load = ->
+  $("#load_input").click()
+
+@loadReally = (event) ->
+  file = event.target.files[0]
+  # reset the chosen file, so it can be chosen again later.
+  $("#load_input")[0].value = ""
+  if not file.type.match("text.*")
+    $("#log").empty()
+    @log("Not a text file: " + file.name)
+    return
+  reader = new FileReader()
+  reader.onerror = (e) =>
+    $("#log").empty()
+    @log("Error reading file: " + file.name)
+  reader.onload = (e) =>
+    $("#code").empty()
+    $("#code").append(e.target.result)
+    codeChanged()
+  reader.readAsText(file)
+
 @runTimer = null
 @run = ->
   if @runTimer?
@@ -283,6 +304,9 @@ $(document).ready =>
   @emulator.hardware.push(@screen)
   @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
   @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
+
+  # sigh.
+  $("#load_input").bind("change", loadReally)
 
   reset()
   $(window).resize (event) -> resized()

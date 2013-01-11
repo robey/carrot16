@@ -120,6 +120,15 @@ SUB PC, 1
                 <button onclick="reset()">&#8634; Reset (F4)</button><br/>
               </div>
             </div>
+            <div class="row-fluid buttons">
+              <div class="span4">
+                <!-- this is really evil. it's to get around rendering bugs in chrome for "file" inputs -->
+                <div id="load_hack">
+                  <button onclick="load()" id="load_button">&#x21e7; Load</button>
+                  <input type="file" id="load_input" />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="registers">

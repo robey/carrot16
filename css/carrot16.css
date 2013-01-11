@@ -196,7 +196,29 @@ a {
   font-weight: bold;
   width: 100%;
   text-align: left;
-  padding: 10px 10px;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5em;
+}
+
+/*
+ * hackity hack hack!
+ * place the file input below the button, and hide it (opacity zero).
+ * this is because chrome has really ugly bugs rendering a file input. :(
+ */
+#load_hack {
+  position: relative;
+}
+#load_input {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  z-index: -1;
+  opacity: 0;
+}
+#load_button {
+  position: relative;
+  z-index: 1;
 }
 
 .registers {
