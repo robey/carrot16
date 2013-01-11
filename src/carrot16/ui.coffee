@@ -26,6 +26,10 @@ pad = (num, width) ->
 matchHeight = (dest, source) ->
   dest.css("height", source.css("height"))
 
+@log = (message) ->
+  $("#log").css("display", "block")
+  $("#log").append(message)
+
 # scroll the code-view so that the currently-running line is visible.
 scrollToLine = (lineNumber) ->
   line = $("#ln#{lineNumber}")
@@ -133,9 +137,8 @@ assemble = ->
 
   emulator.clearMemory()
 
-  logger = (lineno, pos, message) ->
-    $("#log").css("display", "block")
-    $("#log").append("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}<br/>")
+  logger = (lineno, pos, message) =>
+    @log("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}<br/>")
     $("#ln#{lineno}").css("background-color", "#f88")
   asm = new d16bunny.Assembler(logger)
   @assembled = asm.compile(lines)
@@ -245,9 +248,9 @@ assemble = ->
   if @runTimer?
     @stopRun()
     return
-  startTime = @prepareRun()
+  @prepareRun()
   @emulator.step()
-  @cleanupRun(startTime)
+  # no point in updating the cpu heat, since we didn't do a full slice.
   @updateViews(scroll: true)
 
 @prepareRun = ->

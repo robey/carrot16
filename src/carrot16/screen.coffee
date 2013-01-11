@@ -88,6 +88,8 @@ class Screen extends Hardware
     super(@id, @version, @manufacturer)
     @screen = @screenElement[0].getContext("2d")
     @image = @screen.createImageData(@DISPLAY_WIDTH * @PIXEL_SIZE, @DISPLAY_HEIGHT * @PIXEL_SIZE)
+    @screenMapWatch = null
+    @screenMapDirty = {}
     @reset()
 
   reset: ->
@@ -95,12 +97,14 @@ class Screen extends Hardware
     @fontMap = 0
     @paletteMap = 0
     @borderColor = 0
+    @screenElement.css("background-color", "#000")
     for x in [0 ... @DISPLAY_WIDTH * @PIXEL_SIZE]
       for y in [0 ... @DISPLAY_HEIGHT * @PIXEL_SIZE]
         for i in [0 ... 3]
           @image.data[(y * @DISPLAY_WIDTH * @PIXEL_SIZE + x) * 4 + i] = 0
         # alpha:
         @image.data[(y * @DISPLAY_WIDTH * @PIXEL_SIZE + x) * 4 + 3] = 0xff
+    @invalidate()
     @update()
 
   blankOn: ->
@@ -116,9 +120,17 @@ class Screen extends Hardware
   staticOff: ->
     @staticElement.css("display", "none")
 
+  invalidate: ->
+    if not @screenMap? then return
+    for i in [0 ... @TEXT_WIDTH * @TEXT_HEIGHT]
+      @screenMapDirty[@screenMap + i] = true
+
   request: (emulator) ->
     switch emulator.registers.A
       when 0 # MEM_MAP_SCREEN
+        if @screenMapWatch?
+          emulator.memory.unwatchWrites(@screenMapWatch)
+          @screenMapWatch = null
         map = emulator.registers.B
         if map == 0
           @blankOn()
@@ -127,13 +139,32 @@ class Screen extends Hardware
           if @screenMap == 0
             # when the screen first comes on, you get a burst of static.
             @staticOn()
+          @screenMapWatch = emulator.memory.watchWrites map, map + @TEXT_WIDTH * @TEXT_HEIGHT, (addr) =>
+            @screenMapDirty[addr] = true
         @screenMap = map
+        @invalidate()
+        0
       when 1 # MEM_MAP_FONT
         @fontMap = emulator.registers.B
+        @invalidate()
+        0
       when 2 # MEM_MAP_PALETTE
         @paletteMap = emulator.registers.B
+        @invalidate()
+        0
       when 3 # SET_BORDER_COLOR
         @borderColor = emulator.registers.B & 0xf
+        @invalidate()
+        0
+      when 4 # MEM_DUMP_FONT
+        addr = emulator.registers.B
+        for i in [0 ... 256]
+          emulator.memory.set(addr + i, if @fontMap == 0 then @DEFAULT_FONT[i] else emulator.memory.peek(@fontMap + i))
+        256
+      when 5 # MEM_DUMP_PALETTE
+        addr = emulator.registers.B
+        # FIXME
+        16        
 
   update: (memory) ->
     if @screenMap == 0
@@ -152,11 +183,12 @@ class Screen extends Hardware
           0xff
         ])
 
-    map = @screenMap
     lineSize = @DISPLAY_WIDTH * @PIXEL_SIZE * 4
-    $("#log").empty()
+    touched = false
     for y in [0 ... @TEXT_HEIGHT]
       for x in [0 ... @TEXT_WIDTH]
+        map = @screenMap + y * @TEXT_HEIGHT + x
+        continue if not @screenMapDirty[map]
         cell = memory.peek(map)
         fc = palette[(cell >> 12) & 0xf]
         bc = palette[(cell >> 8) & 0xf]
@@ -164,10 +196,11 @@ class Screen extends Hardware
         fontWord = if @fontMap == 0
           (@DEFAULT_FONT[fontOffset] << 16) | @DEFAULT_FONT[fontOffset + 1]
         else
-          (memory[@fontMap + fontOffset] << 16) | memory[@fontMap + fontOffset + 1]
+          (memory.peek(@fontMap + fontOffset) << 16) | memory.peek(@fontMap + fontOffset + 1)
         blink = (cell & 0x80) != 0
 
         # "blit" the character out.
+        touched = true
         bit = (1 << 31)
         for cx in [0 ... @CELL_WIDTH]
           xbase = (x * @CELL_WIDTH + cx) * @PIXEL_SIZE
@@ -182,12 +215,12 @@ class Screen extends Hardware
                 @image.data[offset + 2] = color[2]
                 @image.data[offset + 3] = color[3]
             bit = (bit >> 1) & 0x7fffffff
-        map += 1
+        @screenMapDirty[map] = false
 
-    @screen.putImageData(@image, 0, 0)
+    if touched then @screen.putImageData(@image, 0, 0)
 
     color = palette[@borderColor]
-    @screenElement.css("background-color", "#" + pad(color[0].toString(16), 2) + pad(color[1].toString(16), 2) + pad(color[2].toString(16), 2))
+    @screenElement.css("background-color", "rgb(#{color[0]},#{color[1]},#{color[2]})")
 
 
 exports.Screen = Screen
