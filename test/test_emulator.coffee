@@ -46,11 +46,11 @@ describe "Emulator", ->
     e.registers.SP = 0x100
     e.memory.set(0xff, 0x1234)
     e.getPush().should.equal(0x1234)
-    e.registers.SP.should.equal(0xff)
+    e.registers.SP.should.equal(0x100)
     e.registers.SP = 0
     e.memory.set(0xffff, 0x9999)
     e.getPush().should.equal(0x9999)
-    e.registers.SP.should.equal(0xffff)
+    e.registers.SP.should.equal(0)
 
   it "pop", ->
     e = new carrot16.Emulator()
@@ -119,7 +119,7 @@ describe "Emulator", ->
       e.registers.SP = 10
       e.memory.set(9, 0x5555)
       e.fetchOperand(0x18, true).should.equal(0x5555)
-      e.registers.SP.should.equal(9)
+      e.registers.SP.should.equal(10)
     it "PEEK", ->
       e.registers.SP = 10
       e.memory.set(10, 0x4444)
@@ -555,3 +555,17 @@ describe "Emulator", ->
       e.memory.get(100).should.equal(0xbcbc)
       e.registers.I.should.equal(99)
       e.registers.J.should.equal(199)
+
+  describe "interesting test cases", ->
+    e = new carrot16.Emulator()
+
+    it "SET PUSH, A", ->
+      preload(e, 0x01, 0x18, 0x00)
+      e.registers.SP = 0x100
+      e.registers.A = 9
+      e.step()
+      e.memory.get(0x100).should.equal(0)
+      e.memory.get(0xff).should.equal(9)
+      e.registers.SP.should.equal(0xff)
+
+

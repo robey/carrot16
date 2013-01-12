@@ -44,13 +44,13 @@ class Emulator
     @registers.SP = (@registers.SP + 1) & 0xffff
     rv
 
-  # [--SP]
   # the dcpu spec actually allows binary ops like "ADD PUSH, POP" where PUSH is both a source and a destination, so the
-  # community has agreed that we should just treat it as a read-only [--SP].
+  # community has agreed that we should just treat it as a read-only [SP - 1].
   getPush: ->
-    @registers.SP = (@registers.SP - 1) & 0xffff
-    @memory.get(@registers.SP)
+#    @registers.SP = (@registers.SP - 1) & 0xffff
+    @memory.get(@registers.SP - 1)
 
+  # [--SP]
   push: (value) ->
     @registers.SP = (@registers.SP - 1) & 0xffff
     @memory.set(@registers.SP, value)
