@@ -81,6 +81,11 @@ updateRegisters = ->
   canvas.fillStyle = "rgb(#{color[0]},#{color[1]},#{color[2]})"
   canvas.fillRect(0, Math.floor(100 * (1.0 - @cpuHeat)), 1, 100)
 
+@scrollToMemory = (address) ->
+  if $("#tab2_content").css("display") == "none" then return
+  $("#tab2_content").scrollTop(Math.floor(address / 0x100) * 32)
+  @updateMemoryView()
+
 @updateMemoryView = ->
   if $("#tab2_content").css("display") == "none" then return
   offset = $("#tab2_content").scrollTop() * 8
@@ -97,6 +102,8 @@ updateRegisters = ->
     dump.append(" ")
     value = @emulator.memory.peek(addr)
     hex = $(document.createElement("span"))
+    hex.addClass("pointer")
+    hex.bind("click", do (value) -> (-> scrollToMemory(value)))
     hex.append(pad(value.toString(16), 4))
     if addr == @emulator.registers.PC
       hex.addClass("r_pc")
@@ -157,6 +164,14 @@ assemble = ->
 
 # ----- things that must be accessible from html (globals)
 
+@goToPC = ->
+  @scrollToMemory(@emulator.registers.PC)
+  if not @assembled? then return
+  lineNumber = @assembled.memToClosestLine(@emulator.registers.PC)
+  if lineNumber?
+    positionHighlight(lineNumber)
+    scrollToLine(lineNumber)
+  
 @setBreakpoint = (line, isSet) ->
   if not @assembled.lineToMem(line)? then isSet = false
   @breakpoints[line] = isSet
@@ -337,8 +352,16 @@ $(document).ready =>
   @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
   @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
 
-  # sigh.
+  # thread "load" clicks through to the real file loader. (the web sucks.)
   $("#load_input").bind("change", loadReally)
+
+  # click on a register to view it in the memory dump (or listing, for PC)
+  $("#regPC").click(=> goToPC())
+  $("#regSP").click(=> scrollToMemory(emulator.registers.SP))
+  $("#regIA").click(=> scrollToMemory(emulator.registers.IA))
+  $("#regA").click(=> scrollToMemory(emulator.registers.A))
+  $("#regB").click(=> scrollToMemory(emulator.registers.B))
+  $("#regC").click(=> scrollToMemory(emulator.registers.C))
 
   reset()
   $(window).resize (event) -> resized()
