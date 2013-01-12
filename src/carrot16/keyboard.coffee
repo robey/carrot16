@@ -47,23 +47,37 @@ class Keyboard extends Hardware
   trigger: ->
     if @message != 0 then @emulator.queueInterrupt(@message)
 
+  send: (key) ->
+    @buffer.push(key)
+    if @buffer.length > 8 then @buffer.shift()
+    @trigger()
+
   keydown: (key) ->
     @pressed[@translate[key]] = true
     @trigger()
-    # have to intercept BS & SPACE or chrome will do something weird.
+    # have to intercept BACKSPACE & ENTER or chrome will do something weird.
+    if key == Key.BACKSPACE
+      @send(@BACKSPACE)
+      false
+    else if key == Key.ENTER
+      @send(@ENTER)
+      false
+    else
+      true
 
-  #   switch (code) {
-  #     case this.JS.BS: {
-  #       this.send(this.BS, queueInterrupt);
-  #       return false;
-  #     }
-  #     case this.JS.ENTER: {
-  #       this.send(this.ENTER, queueInterrupt);
-  #       return false;
-  #     }
-  #   }
-  #   return true;
-  # },
+  keypress: (key) ->
+    # ignore weird ones.
+    if key >= 0x20 and key < 0x7f
+      @send(key)
+
+  keyup: (key) ->
+    @pressed[@translate[key]] = false
+    # buffer a key event for the non-ascii keys.
+    if key in [ Key.UP, Key.DOWN, Key.LEFT, Key.RIGHT, Key.INSERT, Key.DELETE ]
+      @send(@translate[key])
+    # macs don't actually have an INSERT key, so let them use ESC.
+    if key == Key.ESCAPE then @send(@INSERT)
+    @trigger()
 
   request: (emulator) ->
     switch emulator.registers.A

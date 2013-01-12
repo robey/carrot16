@@ -299,22 +299,32 @@ assemble = ->
   @updateViews(scroll: true)
 
 Key = carrot16.Key
+
+# return false to abort default handling of the event.
 $(document).keydown (event) =>
   switch event.which
     when Key.F1
       $("#load_input").click()
-      return
+      return false
     when Key.F4
       reset()
-      return
+      return false
     when Key.F5
       $("#button_run").click()
-      return
+      return false
     when Key.F6
       step()
-      return
-  if not @runTimer? then return
+      return false
+  if not @runTimer? then return true
   @keyboard.keydown(event.which)
+
+$(document).keypress (event) =>
+  if not @runTimer? then return true
+  @keyboard.keypress(event.which)
+
+$(document).keyup (event) =>
+  if not @runTimer? then return true
+  @keyboard.keyup(event.which)
 
 $(document).ready =>
   @emulator = new carrot16.Emulator()
