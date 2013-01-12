@@ -12,3 +12,9 @@ exports.Memory = memory.Memory
 
 clock = require './carrot16/clock'
 exports.Clock = clock.Clock
+
+key = require './carrot16/key'
+exports.Key = key.Key
+
+keyboard = require './carrot16/keyboard'
+exports.Keyboard = key.Keyboard

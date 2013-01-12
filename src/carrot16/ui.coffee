@@ -229,7 +229,7 @@ assemble = ->
     @log("Error reading file: " + file.name)
   reader.onload = (e) =>
     $("#code").empty()
-    $("#code").append(e.target.result)
+    $("#code").val(e.target.result)
     codeChanged()
   reader.readAsText(file)
 
@@ -298,12 +298,32 @@ assemble = ->
   assemble()
   @updateViews(scroll: true)
 
+Key = carrot16.Key
+$(document).keydown (event) =>
+  switch event.which
+    when Key.F1
+      $("#load_input").click()
+      return
+    when Key.F4
+      reset()
+      return
+    when Key.F5
+      $("#button_run").click()
+      return
+    when Key.F6
+      step()
+      return
+  if not @runTimer? then return
+  @keyboard.keydown(event.which)
+
 $(document).ready =>
   @emulator = new carrot16.Emulator()
   @clock = new carrot16.Clock()
   @emulator.hardware.push(@clock)
   @screen = new carrot16.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
   @emulator.hardware.push(@screen)
+  @keyboard = new carrot16.Keyboard()
+  @emulator.hardware.push(@keyboard)
   @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
   @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
 
@@ -318,5 +338,4 @@ $(document).ready =>
 
 #  window.localStorage.setItem("robey", "hello")
 # window.localStorage.getItem("robey")
-
 

@@ -40,7 +40,9 @@ emulatorFiles = [
   "emulator",
   "memory",
   "screen",
-  "clock"
+  "clock",
+  "key",
+  "keyboard"
 ]
 
 synctask "build", "build javascript", ->
