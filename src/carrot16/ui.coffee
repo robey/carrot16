@@ -238,12 +238,12 @@ assemble = ->
   if @runTimer?
     @stopRun()
     return
-  # Clock.start()
+  @clock.start()
   @runTimer = setInterval((=> @clockTick()), @TIME_SLICE_MSEC)
   $("#button_run").html("&#215; Stop (F5)")
 
 @stopRun = ->
-  # Clock.stop()
+  @clock.stop()
   clearInterval(@runTimer)
   @runTimer = null
   @lastCycles = null
@@ -300,6 +300,8 @@ assemble = ->
 
 $(document).ready =>
   @emulator = new carrot16.Emulator()
+  @clock = new carrot16.Clock()
+  @emulator.hardware.push(@clock)
   @screen = new carrot16.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
   @emulator.hardware.push(@screen)
   @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)

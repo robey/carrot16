@@ -33,6 +33,14 @@ class Screen extends Hardware
   CELL_WIDTH: 4
   CELL_HEIGHT: 8
 
+  # commands
+  MEM_MAP_SCREEN: 0
+  MEM_MAP_FONT: 1
+  MEM_MAP_PALETTE: 2
+  SET_BORDER_COLOR: 3
+  MEM_DUMP_FONT: 4
+  MEM_DUMP_PALETTE: 5
+
   DEFAULT_PALETTE: [
     0x000, 0x00a, 0x0a0, 0x0aa, 0xa00, 0xa0a, 0xa50, 0xaaa,
     0x555, 0x55f, 0x5f5, 0x5ff, 0xf55, 0xf5f, 0xff5, 0xfff
@@ -122,7 +130,7 @@ class Screen extends Hardware
 
   request: (emulator) ->
     switch emulator.registers.A
-      when 0 # MEM_MAP_SCREEN
+      when @MEM_MAP_SCREEN
         if @screenMapWatch?
           emulator.memory.unwatchWrites(@screenMapWatch)
           @screenMapWatch = null
@@ -139,24 +147,24 @@ class Screen extends Hardware
         @screenMap = map
         @invalidate()
         0
-      when 1 # MEM_MAP_FONT
+      when @MEM_MAP_FONT
         @fontMap = emulator.registers.B
         @invalidate()
         0
-      when 2 # MEM_MAP_PALETTE
+      when @MEM_MAP_PALETTE
         @paletteMap = emulator.registers.B
         @invalidate()
         0
-      when 3 # SET_BORDER_COLOR
+      when @SET_BORDER_COLOR
         @borderColor = emulator.registers.B & 0xf
         @invalidate()
         0
-      when 4 # MEM_DUMP_FONT
+      when @MEM_DUMP_FONT
         addr = emulator.registers.B
         for i in [0 ... 256]
           emulator.memory.set(addr + i, if @fontMap == 0 then @DEFAULT_FONT[i] else emulator.memory.peek(@fontMap + i))
         256
-      when 5 # MEM_DUMP_PALETTE
+      when @MEM_DUMP_PALETTE
         addr = emulator.registers.B
         for i in [0 ... 16]
           emulator.memory.set(addr + i, if @paletteMap == 0 then @DEFAULT_PALETTE[i] else emulator.memory.peek(@paletteMap + i))

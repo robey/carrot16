@@ -39,7 +39,8 @@ synctask = (name, description, f) ->
 emulatorFiles = [
   "emulator",
   "memory",
-  "screen"
+  "screen",
+  "clock"
 ]
 
 synctask "build", "build javascript", ->
