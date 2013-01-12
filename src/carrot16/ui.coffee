@@ -6,6 +6,16 @@
 @breakpoints = {}
 @assembled = null
 @scrollTop = []
+@memoryReads = []
+@memoryWrites = []
+
+# fraction of the time slice we actually spent running the emulator
+@cpuHeat = 0.0
+
+# cpu timings
+@TIME_SLICE_MSEC = 50
+@CLOCK_SPEED_HZ = 100000
+@CYCLES_PER_SLICE = Math.floor(@CLOCK_SPEED_HZ * 1.0 / @TIME_SLICE_MSEC)
 
 pad = (num, width) ->
   num = num.toString()
@@ -15,6 +25,10 @@ pad = (num, width) ->
 # jquery makes this kinda trivial.
 matchHeight = (dest, source) ->
   dest.css("height", source.css("height"))
+
+@log = (message) ->
+  $("#log").css("display", "block")
+  $("#log").append(message)
 
 # scroll the code-view so that the currently-running line is visible.
 scrollToLine = (lineNumber) ->
@@ -55,6 +69,22 @@ updateRegisters = ->
   for r, v of @emulator.registers
     $("#reg#{r}").html(pad(v.toString(16), 4))
   $("#cycles").html(@emulator.cycles)
+  # update cpu heat meter
+  lowColor = [ 127, 0, 0 ]
+  hiColor = [ 255, 0, 0 ]
+  # my kingdom for Array.zip
+  color = [0...3].map (i) =>
+    Math.floor(lowColor[i] + @cpuHeat * (hiColor[i] - lowColor[i]))
+  canvas = $("#cpu_heat")[0].getContext("2d")
+  canvas.fillStyle = "#fff"
+  canvas.fillRect(0, 0, 1, 100)
+  canvas.fillStyle = "rgb(#{color[0]},#{color[1]},#{color[2]})"
+  canvas.fillRect(0, Math.floor(100 * (1.0 - @cpuHeat)), 1, 100)
+
+@scrollToMemory = (address) ->
+  if $("#tab2_content").css("display") == "none" then return
+  $("#tab2_content").scrollTop(Math.floor(address / 0x100) * 32)
+  @updateMemoryView()
 
 @updateMemoryView = ->
   if $("#tab2_content").css("display") == "none" then return
@@ -70,8 +100,10 @@ updateRegisters = ->
       lines.append(pad(addr.toString(16), 4) + ":")
       lines.append($(document.createElement("br")))
     dump.append(" ")
-    value = (@emulator.memory[addr] or 0) & 0xffff
+    value = @emulator.memory.peek(addr)
     hex = $(document.createElement("span"))
+    hex.addClass("pointer")
+    hex.bind("click", do (value) -> (-> scrollToMemory(value)))
     hex.append(pad(value.toString(16), 4))
     if addr == @emulator.registers.PC
       hex.addClass("r_pc")
@@ -79,6 +111,10 @@ updateRegisters = ->
       hex.addClass("r_sp")
     else if addr != 0 and addr == @emulator.registers.IA
       hex.addClass("r_ia")
+    else if addr in @memoryWrites
+      hex.addClass("memory_write")
+    else if addr in @memoryReads
+      hex.addClass("memory_read")
     dump.append(hex)
     if addr % 8 == 7 then dump.append($(document.createElement("br")))
 
@@ -107,17 +143,16 @@ assemble = ->
   $("#log").css("display", "none")
 
   emulator.clearMemory()
-#  Screen.resetFont(memory)
 
-  logger = (lineno, pos, message) ->
-    $("#log").css("display", "block")
-    $("#log").append("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}<br/>")
+  logger = (lineno, pos, message) =>
+    @log("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}<br/>")
     $("#ln#{lineno}").css("background-color", "#f88")
   asm = new d16bunny.Assembler(logger)
   @assembled = asm.compile(lines)
 
   if @assembled.errorCount == 0
-    @assembled.createImage(@emulator.memory)
+    buffer = @assembled.createImage()
+    @emulator.memory.flash(buffer)
     # turn off breakpoints that aren't code anymore.
     for line, isSet of @breakpoints #when isSet
       @setBreakpoint(line, isSet)
@@ -129,6 +164,14 @@ assemble = ->
 
 # ----- things that must be accessible from html (globals)
 
+@goToPC = ->
+  @scrollToMemory(@emulator.registers.PC)
+  if not @assembled? then return
+  lineNumber = @assembled.memToClosestLine(@emulator.registers.PC)
+  if lineNumber?
+    positionHighlight(lineNumber)
+    scrollToLine(lineNumber)
+  
 @setBreakpoint = (line, isSet) ->
   if not @assembled.lineToMem(line)? then isSet = false
   @breakpoints[line] = isSet
@@ -153,6 +196,8 @@ assemble = ->
   $("#tab0_content").height($(window).height() - $("#tab0_content").position().top - extra)
   $("#tab1_content").height($(window).height() - $("#tab1_content").position().top - extra)
   $("#tab2_content").height(32 * 20 + 7)
+  # compensate for extra ceremonial baggage chrome puts around a textarea
+  $("#code").outerWidth($("#codebox").width())
   @updateViews()
 
 @codeEdited = ->
@@ -161,6 +206,8 @@ assemble = ->
 
 @codeChanged = ->
   @typingTimer = null
+  @emulator.reset()
+  @screen.reset()
   assemble()
 
 @toggleTab = (index) ->
@@ -180,24 +227,47 @@ assemble = ->
       tab.addClass("tab_inactive")
   @updateViews()
 
+@load = ->
+  $("#load_input").click()
+
+@loadReally = (event) ->
+  file = event.target.files[0]
+  # reset the chosen file, so it can be chosen again later.
+  $("#load_input")[0].value = ""
+  if not file.type.match("text.*")
+    $("#log").empty()
+    @log("Not a text file: " + file.name)
+    return
+  reader = new FileReader()
+  reader.onerror = (e) =>
+    $("#log").empty()
+    @log("Error reading file: " + file.name)
+  reader.onload = (e) =>
+    $("#code").empty()
+    $("#code").val(e.target.result)
+    codeChanged()
+  reader.readAsText(file)
+
 @runTimer = null
 @run = ->
   if @runTimer?
     @stopRun()
     return
-  # Clock.start()
-  @runTimer = setInterval((=> @clockTick()), 50)
+  @clock.start()
+  @runTimer = setInterval((=> @clockTick()), @TIME_SLICE_MSEC)
   $("#button_run").html("&#215; Stop (F5)")
 
 @stopRun = ->
-  # Clock.stop()
+  @clock.stop()
   clearInterval(@runTimer)
   @runTimer = null
+  @lastCycles = null
   $("#button_run").html("&#8595; Run (F5)")
   @updateViews(scroll: true)
 
 @clockTick = ->
-  startCycles = @emulator.cycles
+  if not @lastCycles? then @lastCycles = @emulator.cycles
+  startTime = @prepareRun()
   loop
     if not @runTimer? then return
     @emulator.step()
@@ -208,7 +278,11 @@ assemble = ->
     if @breakpoints[@assembled.memToLine(@emulator.registers.PC)]
       @stopRun()
       return
-    if @emulator.cycles > startCycles + 5213
+    if @emulator.cycles >= @lastCycles + @CYCLES_PER_SLICE
+      # funny math here is because we might have done more cycles than we
+      # were supposed to. so we want them to be credited to the next slice.
+      @lastCycles += @CYCLES_PER_SLICE
+      @cleanupRun(startTime)
       @updateViews()
       return
 
@@ -216,20 +290,78 @@ assemble = ->
   if @runTimer?
     @stopRun()
     return
+  @prepareRun()
   @emulator.step()
+  # no point in updating the cpu heat, since we didn't do a full slice.
   @updateViews(scroll: true)
 
+@prepareRun = ->
+  @memoryReads = []
+  @memoryWrites = []
+  Date.now()
+
+@cleanupRun = (startTime) ->
+  @cpuHeat = (Date.now() - startTime) * 1.0 / @TIME_SLICE_MSEC
+
 @reset = ->
+  @memoryReads = []
+  @memoryWrites = []
+  @cpuHeat = 0.0
   @emulator.reset()
   @screen.reset()
   # keypointer = 0;
   assemble()
   @updateViews(scroll: true)
 
+Key = carrot16.Key
+
+# return false to abort default handling of the event.
+$(document).keydown (event) =>
+  switch event.which
+    when Key.F1
+      $("#load_input").click()
+      return false
+    when Key.F4
+      reset()
+      return false
+    when Key.F5
+      $("#button_run").click()
+      return false
+    when Key.F6
+      step()
+      return false
+  if not @runTimer? then return true
+  @keyboard.keydown(event.which)
+
+$(document).keypress (event) =>
+  if not @runTimer? then return true
+  @keyboard.keypress(event.which)
+
+$(document).keyup (event) =>
+  if not @runTimer? then return true
+  @keyboard.keyup(event.which)
+
 $(document).ready =>
-  @emulator = new bunnyemu.Emulator()
-  @screen = new bunnyemu.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
+  @emulator = new carrot16.Emulator()
+  @clock = new carrot16.Clock()
+  @emulator.hardware.push(@clock)
+  @screen = new carrot16.Screen($("#screen"), $("#loading_overlay"), $("#static_overlay"))
   @emulator.hardware.push(@screen)
+  @keyboard = new carrot16.Keyboard()
+  @emulator.hardware.push(@keyboard)
+  @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
+  @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
+
+  # thread "load" clicks through to the real file loader. (the web sucks.)
+  $("#load_input").bind("change", loadReally)
+
+  # click on a register to view it in the memory dump (or listing, for PC)
+  $("#regPC").click(=> goToPC())
+  $("#regSP").click(=> scrollToMemory(emulator.registers.SP))
+  $("#regIA").click(=> scrollToMemory(emulator.registers.IA))
+  $("#regA").click(=> scrollToMemory(emulator.registers.A))
+  $("#regB").click(=> scrollToMemory(emulator.registers.B))
+  $("#regC").click(=> scrollToMemory(emulator.registers.C))
 
   reset()
   $(window).resize (event) -> resized()
@@ -239,5 +371,4 @@ $(document).ready =>
 
 #  window.localStorage.setItem("robey", "hello")
 # window.localStorage.getItem("robey")
-
 

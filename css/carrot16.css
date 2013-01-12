@@ -26,15 +26,26 @@ a {
   overflow-y: no-display;
 }
 
+#header {
+  padding-top: 0.5em;
+  padding-bottom: 1.5em;
+}
+.header_image {
+  height: 48px;
+}
+
 .tabs {
-  margin-left: 0px !important;
+  margin-left: 0.25em !important;
   padding: 0px 10px;
   top: 4em;
+}
+.tab_spacer {
+  width: 4em !important;
 }
 .tab {
   font-size: 12pt;
   padding: 2px 7px;
-  border-radius: 4px 4px 0px 0px;
+  border-radius: 0.5em 0.5em 0px 0px;
   margin: 0px 2px;
   min-height: 0px;  /* override bootstrap */
 }
@@ -73,6 +84,7 @@ a {
   display: block;
   text-align: right;
   color: gray;
+  width: 4em !important;
 }
 .pointer {
   cursor: pointer;
@@ -143,9 +155,15 @@ a {
   padding-top: 3px;
   padding-left: 0.5em;
 }
+.memory_key {
+  margin: 0px;
+  padding: 2px;
+}
 
 .screen_frame {
   position: relative;
+  /* exactly 10px bigger than the screen on each side */
+  width: 404px;
 }
 #screen {
   background-color: black;
@@ -178,7 +196,29 @@ a {
   font-weight: bold;
   width: 100%;
   text-align: left;
-  padding: 10px 10px;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5em;
+}
+
+/*
+ * hackity hack hack!
+ * place the file input below the button, and hide it (opacity zero).
+ * this is because chrome has really ugly bugs rendering a file input. :(
+ */
+#load_hack {
+  position: relative;
+}
+#load_input {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  z-index: -1;
+  opacity: 0;
+}
+#load_button {
+  position: relative;
+  z-index: 1;
 }
 
 .registers {
@@ -210,9 +250,24 @@ a {
   background-color: #ffaaaa;
   text-decoration: none;
 }
+.memory_read {
+  color: #f00;
+  text-decoration: none;
+}
+.memory_write {
+  background-color: #000;
+  color: #fcc;
+  text-decoration: none;
+}
 .registers td.cycles {
   color: gray;
   text-align: right;
+}
+#cpu_heat {
+  width: 1em;
+  height: 100%;
+  margin-left: 1em;
+  border: solid 1px #ccc;
 }
 
 #disassemble {

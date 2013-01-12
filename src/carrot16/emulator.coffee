@@ -1,5 +1,8 @@
 
-# TBD
+Memory = require("./memory").Memory
+
+# abstraction for hardware attached to the DCPU. each piece of hardware will
+# be assigned a number which is used to identify it in HWQ and HWI operations.
 class Hardware
   # required id, version, manufacturer for HWQ
   constructor: (@id, @version, @manufacturer) ->
@@ -7,12 +10,13 @@ class Hardware
   # handler for HWI
   request: (emulator) ->
 
+
 class Emulator
   RegisterNames: "ABCXYZIJ"
 
   # memory: an array of 65536 words (main memory)
   constructor: (memory) ->
-    if not memory then memory = []
+    if not memory then memory = new Memory()
     @memory = memory
     @hardware = []
     @reset()
@@ -27,29 +31,29 @@ class Emulator
     @cycles = 0
 
   clearMemory: ->
-    for i in [0 ... 0x10000] then if @memory[i] then @memory[i] = 0
+    @memory.clear()
 
   nextPC: ->
-    rv = @memory[@registers.PC] or 0
+    rv = @memory.get(@registers.PC)
     @registers.PC = (@registers.PC + 1) & 0xffff
     rv
 
   # [SP++]
   pop: ->
-    rv = @memory[@registers.SP] or 0
+    rv = @memory.get(@registers.SP)
     @registers.SP = (@registers.SP + 1) & 0xffff
     rv
 
-  # [--SP]
   # the dcpu spec actually allows binary ops like "ADD PUSH, POP" where PUSH is both a source and a destination, so the
-  # community has agreed that we should just treat it as a read-only [--SP].
+  # community has agreed that we should just treat it as a read-only [SP - 1].
   getPush: ->
-    @registers.SP = (@registers.SP - 1) & 0xffff
-    @memory[@registers.SP] or 0
+#    @registers.SP = (@registers.SP - 1) & 0xffff
+    @memory.get(@registers.SP - 1)
 
+  # [--SP]
   push: (value) ->
     @registers.SP = (@registers.SP - 1) & 0xffff
-    @memory[@registers.SP] = value
+    @memory.set(@registers.SP, value)
 
   readRegister: (number) ->
     @registers[@RegisterNames[number]] or 0
@@ -252,25 +256,25 @@ class Emulator
       @readRegister(operand)
     else if operand < 0x10
       # [R]
-      @memory[@readRegister(operand - 0x08)] or 0
+      @memory.get(@readRegister(operand - 0x08))
     else if operand < 0x18
       # [R + imm]
       word = @nextPC()
       if destination then @immediate = word
       @cycles += 1
-      @memory[(word + @readRegister(operand - 0x10)) & 0xffff] or 0
+      @memory.get(word + @readRegister(operand - 0x10))
     else if operand == 0x18
       # POP [SP++] / PUSH [--SP]
       if destination then @getPush() else @pop()
     else if operand == 0x19
       # PEEK [SP]
-      @memory[@registers.SP] or 0
+      @memory.get(@registers.SP)
     else if operand == 0x1a
       # PICK n [SP + imm]
       word = @nextPC()
       if destination then @immediate = word
       @cycles += 1
-      @memory[(word + @registers.SP) & 0xffff] or 0
+      @memory.get(word + @registers.SP)
     else if operand == 0x1b
       # SP
       @registers.SP
@@ -285,7 +289,7 @@ class Emulator
       word = @nextPC()
       if destination then @immediate = word
       @cycles += 1
-      @memory[word] or 0
+      @memory.get(word)
     else if operand == 0x1f
       # imm
       word = @nextPC()
@@ -302,19 +306,19 @@ class Emulator
       @writeRegister(operand, value)
     else if operand < 0x10
       # [R]
-      @memory[@readRegister(operand - 0x08)] = value
+      @memory.set(@readRegister(operand - 0x08), value)
     else if operand < 0x18
       # [R + imm]
-      @memory[(@immediate + @readRegister(operand - 0x10)) & 0xffff] = value
+      @memory.set(@immediate + @readRegister(operand - 0x10), value)
     else if operand == 0x18
       # PUSH [--SP]
       @push(value)
     else if operand == 0x19
       # PEEK [SP]
-      @memory[@registers.SP] = value
+      @memory.set(@registers.SP, value)
     else if operand == 0x1a
       # PICK n [SP + imm]
-      @memory[(@immediate + @registers.SP) & 0xffff] = value
+      @memory.set(@immediate + @registers.SP, value)
     else if operand == 0x1b
       # SP
       @registers.SP = value
@@ -326,7 +330,7 @@ class Emulator
       @registers.EX = value
     else if operand == 0x1e
       # [imm]
-      @memory[@immediate] = value
+      @memory.set(@immediate, value)
     # ignore "store into immediate"
 
   queueInterrupt: (id) ->
