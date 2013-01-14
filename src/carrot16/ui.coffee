@@ -82,13 +82,13 @@ updateRegisters = ->
   canvas.fillRect(0, Math.floor(100 * (1.0 - @cpuHeat)), 1, 100)
 
 @scrollToMemory = (address) ->
-  if $("#tab2_content").css("display") == "none" then return
-  $("#tab2_content").scrollTop(Math.floor(address / 0x100) * 32)
+  if $("#tab1_content").css("display") == "none" then @toggleTab(1)
+  $("#tab1_content").scrollTop(Math.floor(address / 0x100) * 32)
   @updateMemoryView()
 
 @updateMemoryView = ->
-  if $("#tab2_content").css("display") == "none" then return
-  offset = $("#tab2_content").scrollTop() * 8
+  if $("#tab1_content").css("display") == "none" then return
+  offset = $("#tab1_content").scrollTop() * 8
   lines = $("#memory_lines")
   dump = $("#memory_dump")
   lines.css("top", offset / 8)
@@ -165,12 +165,14 @@ assemble = ->
 # ----- things that must be accessible from html (globals)
 
 @goToPC = ->
-  @scrollToMemory(@emulator.registers.PC)
-  if not @assembled? then return
-  lineNumber = @assembled.memToClosestLine(@emulator.registers.PC)
-  if lineNumber?
-    positionHighlight(lineNumber)
-    scrollToLine(lineNumber)
+  if $("#tab0_content").css("display") == "none"
+    @scrollToMemory(@emulator.registers.PC)
+  else
+    if not @assembled? then return
+    lineNumber = @assembled.memToClosestLine(@emulator.registers.PC)
+    if lineNumber?
+      positionHighlight(lineNumber)
+      scrollToLine(lineNumber)
   
 @setBreakpoint = (line, isSet) ->
   if not @assembled.lineToMem(line)? then isSet = false
@@ -194,8 +196,7 @@ assemble = ->
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
   extra = if $("#log").css("display") == "none" then 0 else $("#log").outerHeight(true)
   $("#tab0_content").height($(window).height() - $("#tab0_content").position().top - extra)
-  $("#tab1_content").height($(window).height() - $("#tab1_content").position().top - extra)
-  $("#tab2_content").height(32 * 20 + 7)
+  $("#tab1_content").height(32 * 20 + 7)
   # compensate for extra ceremonial baggage chrome puts around a textarea
   $("#code").outerWidth($("#codebox").width())
   @updateViews()
@@ -212,7 +213,7 @@ assemble = ->
 
 @toggleTab = (index) ->
   # save scroll position
-  for i in [0...3]
+  for i in [0...2]
     tabContent = $("#tab#{i}_content")
     tab = $("#tab#{i}")
     if tabContent.css("display") != "none" then @scrollTop[i] = tabContent.scrollTop()
@@ -255,14 +256,14 @@ assemble = ->
     return
   @clock.start()
   @runTimer = setInterval((=> @clockTick()), @TIME_SLICE_MSEC)
-  $("#button_run").html("&#215; Stop (F5)")
+  $("#button_run").html("&#215; Stop (^R)")
 
 @stopRun = ->
   @clock.stop()
   clearInterval(@runTimer)
   @runTimer = null
   @lastCycles = null
-  $("#button_run").html("&#8595; Run (F5)")
+  $("#button_run").html("&#8595; Run (^R)")
   @updateViews(scroll: true)
 
 @clockTick = ->
@@ -318,6 +319,12 @@ Key = carrot16.Key
 # return false to abort default handling of the event.
 $(document).keydown (event) =>
   switch event.which
+    when Key.TAB
+      if $("#tab0_content").css("display") == "none"
+        @toggleTab(0)
+      else
+        @toggleTab(1)
+      return false
     when Key.F1
       $("#load_input").click()
       return false
@@ -334,6 +341,19 @@ $(document).keydown (event) =>
   @keyboard.keydown(event.which)
 
 $(document).keypress (event) =>
+  switch event.which
+    when 3 # ^C
+      reset()
+      return false
+    when 12 # ^L
+      $("#load_input").click()
+      return false
+    when 14 # ^N
+      step()
+      return false
+    when 18 # ^R
+      $("#button_run").click()
+      return false
   if not @runTimer? then return true
   @keyboard.keypress(event.which)
 
@@ -362,6 +382,12 @@ $(document).ready =>
   $("#regA").click(=> scrollToMemory(emulator.registers.A))
   $("#regB").click(=> scrollToMemory(emulator.registers.B))
   $("#regC").click(=> scrollToMemory(emulator.registers.C))
+  $("#regX").click(=> scrollToMemory(emulator.registers.X))
+  $("#regY").click(=> scrollToMemory(emulator.registers.Y))
+  $("#regZ").click(=> scrollToMemory(emulator.registers.Z))
+  $("#regI").click(=> scrollToMemory(emulator.registers.I))
+  $("#regJ").click(=> scrollToMemory(emulator.registers.J))
+  $("#regEX").click(=> scrollToMemory(emulator.registers.EX))
 
   reset()
   $(window).resize (event) -> resized()
