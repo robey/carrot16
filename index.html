@@ -2,10 +2,10 @@
 <html>
   <head>
     <title>carrot16</title>
-    <script type="text/javascript" src="js/jquery-1.8.3.js"></script>
-    <script type="text/javascript" src="js/d16asm.js"></script>
-    <script type="text/javascript" src="js/emulator.js"></script>
-    <script type="text/javascript" src="lib/carrot16/ui.js"></script>
+    <script type="text/javascript" src="js/lib/jquery-1.8.3.js"></script>
+    <script type="text/javascript" src="js/lib/d16asm.js"></script>
+    <script type="text/javascript" src="js/built/emulator.js"></script>
+    <script type="text/javascript" src="js/built/ui.js"></script>
     <link rel="stylesheet" href="css/bootstrap-2.2.2.css">
     <link rel="stylesheet" href="css/carrot16.css">
   </head>
@@ -14,30 +14,29 @@
       <img src="images/carrot16.jpg" class="header_image">
     </div>
 
-    <div class="noscroll" id="body">
-      <div class="row-fluid main noscroll" id="box">
-        <div class="span8 noscroll" id="left_panel">
-          <div class="row-fluid" id="tab_row">
-            <div class="span1 tab_spacer"></div>
-            <div class="span7 tabs">
-              <a onclick="toggleTab(0)" class="tab pointer tab_active" id="tab0">Assembler</a>
-              <a onclick="toggleTab(1)" class="tab pointer tab_inactive" id="tab1">Memory Dump</a>
-            </div>
-            <div class="span4"></div>
+    <div class="row-fluid main noscroll" id="body">
+      <div class="span8 noscroll" id="left_panel">
+        <div class="row-fluid" id="tab_row">
+          <div class="span1 tab_spacer"></div>
+          <div class="span7 tabs">
+            <a onclick="toggleTab(0)" class="tab pointer tab_active" id="tab0">Assembler</a>
+            <a onclick="toggleTab(1)" class="tab pointer tab_inactive" id="tab1">Memory Dump</a>
           </div>
-          <div class="row-fluid tab_content" id="tab0_content">
-            <div class="span1 mono pointer linenums">
-              <div>
-                <span id="line_highlight"></span>
-              </div>
-              <div id="linenums">
-                <span class="linenum" id="ln1">1</span>
-                <span class="linenum breakpoint" id="ln2">2</span>
-                <span class="linenum" id="ln3">3</span>
-              </div>
+          <div class="span4"></div>
+        </div>
+        <div class="row-fluid tab_content" id="tab0_content">
+          <div class="span1 mono pointer linenums">
+            <div>
+              <span id="line_highlight"></span>
             </div>
-            <div class="span7 editor_div" id="codebox">
-              <textarea class="mono editor" id="code" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
+            <div id="linenums">
+              <span class="linenum" id="ln1">1</span>
+              <span class="linenum breakpoint" id="ln2">2</span>
+              <span class="linenum" id="ln3">3</span>
+            </div>
+          </div>
+          <div class="span7 editor_div" id="codebox">
+            <textarea class="mono editor" id="code" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
 set a, 0
 set b, 0x80
 hwi 1
@@ -64,90 +63,91 @@ set [0xa4], 0xe0d9
 jmp go
 SUB PC, 1
 </textarea>
-            </div>
-            <div class="span1 mono linenums addr" id="offsets">
-            </div>
-            <div class="span3 mono dump" id="dump">
-            </div>
           </div>
-          <div class="row-fluid tab_content" id="tab1_content" onscroll="updateMemoryView()">
-            <div id="memory_view">
-              <div class="span1 mono linenums" id="memory_lines">
-              </div>
-              <div class="span7 mono editor_div" id="memory_dump">
-              </div>
-              <div class="span1 mono linenums addr" id="memory_unused">
-              </div>
-              <div class="span3 mono dump" id="memory_code">
-              </div>
-            </div>
+          <div class="span1 mono linenums addr" id="offsets">
+          </div>
+          <div class="span3 mono dump" id="dump">
           </div>
         </div>
-        <div class="span4 noscroll" id="panel_right">
-          <div class="screen_frame">
-            <canvas id="screen" width="384" height="288"></canvas>
-            <img id="loading_overlay" src="images/nya-elek.png" width="384" height="288" />
-            <img id="static_overlay" src="images/static.gif" width="384" height="288" />
-
-            <div class="notice">Keyboard input is available while the program is running.</div>
-            <div class="row-fluid buttons">
-              <div class="span4">
-                <button onclick="run()" id="button_run">&#8595; Run (^R)</button>
-              </div>
-              <div class="span4">
-                <button onclick="step()">&#8618; Step (^N)</button>
-              </div>
-              <div class="span4">
-                <button onclick="reset()">&#8634; Reset (^C)</button><br/>
-              </div>
+        <div class="row-fluid tab_content" id="tab1_content" onscroll="updateMemoryView()">
+          <div id="memory_view">
+            <div class="span1 mono linenums" id="memory_lines">
             </div>
-            <div class="row-fluid buttons">
-              <div class="span4">
-                <!-- this is really evil. it's to get around rendering bugs in chrome for "file" inputs -->
-                <div id="load_hack">
-                  <button onclick="load()" id="load_button">&#x21e7; Load (^L)</button>
-                  <input type="file" id="load_input" />
-                </div>
-              </div>
+            <div class="span7 mono editor_div" id="memory_dump">
             </div>
-          </div>
-
-          <div class="registers">
-            <table border=0 class="mono">
-              <tr>
-                <td class="reg_name">PC</td><td id="regPC" class="r_pc pointer">0</td>
-                <td class="reg_name">SP</td><td id="regSP" class="r_sp pointer">0</td>
-                <td class="reg_name">IA</td><td id="regIA" class="r_ia pointer">0</td>
-                <td rowspan=5 id="cpu_heat_box">
-                  <canvas id="cpu_heat" height="100" width="1"></canvas>
-                </td>
-              </tr>
-              <tr>
-                <td class="reg_name">A</td><td id="regA" class="pointer">0</td>
-                <td class="reg_name">B</td><td id="regB" class="pointer">0</td>
-                <td class="reg_name">C</td><td id="regC" class="pointer">0</td>
-              </tr>
-              <tr>
-                <td class="reg_name">X</td><td id="regX" class="pointer">0</td>
-                <td class="reg_name">Y</td><td id="regY" class="pointer">0</td>
-                <td class="reg_name">Z</td><td id="regZ" class="pointer">0</td>
-              </tr>
-              <tr>
-                <td class="reg_name">I</td><td id="regI" class="pointer">0</td>
-                <td class="reg_name">J</td><td id="regJ" class="pointer">0</td>
-                <td class="reg_name"></td>
-              </tr>
-              <tr>
-                <td class="reg_name">EX</td><td id="regEX" class="pointer">0</td>
-                <td colspan=4 class="cycles"><span id="cycles">0</span> cycles</td>
-              </tr>
-            </table>
+            <div class="span1 mono linenums addr" id="memory_unused">
+            </div>
+            <div class="span3 mono dump" id="memory_code">
+            </div>
           </div>
         </div>
       </div>
-      <div class="row-fluid log_frame" id="log_frame">
-        <div class="span12" id="log">
+
+      <!-- panel with monitor and debugging -->
+      <div class="sqpan4" id="right_panel">
+        <div class="screen_frame">
+          <canvas id="screen" width="384" height="288"></canvas>
+          <img id="loading_overlay" src="images/nya-elek.png" width="384" height="288" />
+          <img id="static_overlay" src="images/static.gif" width="384" height="288" />
         </div>
+
+        <div class="notice">Keyboard input is available while the program is running.</div>
+        <div class="row-fluid buttons">
+          <div class="span4">
+            <button onclick="run()" id="button_run">&#8595; Run (^R)</button>
+          </div>
+          <div class="span4">
+            <button onclick="step()">&#8618; Step (^N)</button>
+          </div>
+          <div class="span4">
+            <button onclick="reset()">&#8634; Reset (^C)</button><br/>
+          </div>
+        </div>
+        <div class="row-fluid buttons">
+          <div class="span4">
+            <!-- this is really evil. it's to get around rendering bugs in chrome for "file" inputs -->
+            <div id="load_hack">
+              <button onclick="load()" id="load_button">&#x21e7; Load (^L)</button>
+              <input type="file" id="load_input" />
+            </div>
+          </div>
+        </div>
+
+        <div class="registers">
+          <table border=0 class="mono">
+            <tr>
+              <td class="reg_name pointer" id="PC">PC</td><td id="regPC" class="r_pc pointer">0</td>
+              <td class="reg_name pointer" id="SP">SP</td><td id="regSP" class="r_sp pointer">0</td>
+              <td class="reg_name pointer" id="IA">IA</td><td id="regIA" class="r_ia pointer">0</td>
+              <td rowspan=5 id="cpu_heat_box">
+                <canvas id="cpu_heat" height="100" width="1"></canvas>
+              </td>
+            </tr>
+            <tr>
+              <td class="reg_name pointer" id="A">A</td><td id="regA" class="pointer">0</td>
+              <td class="reg_name pointer" id="B">B</td><td id="regB" class="pointer">0</td>
+              <td class="reg_name pointer" id="C">C</td><td id="regC" class="pointer">0</td>
+            </tr>
+            <tr>
+              <td class="reg_name pointer" id="X">X</td><td id="regX" class="pointer">0</td>
+              <td class="reg_name pointer" id="Y">Y</td><td id="regY" class="pointer">0</td>
+              <td class="reg_name pointer" id="Z">Z</td><td id="regZ" class="pointer">0</td>
+            </tr>
+            <tr>
+              <td class="reg_name pointer" id="I">I</td><td id="regI" class="pointer">0</td>
+              <td class="reg_name pointer" id="J">J</td><td id="regJ" class="pointer">0</td>
+              <td class="reg_name pointer"></td>
+            </tr>
+            <tr>
+              <td class="reg_name pointer" id="EX">EX</td><td id="regEX" class="pointer">0</td>
+              <td colspan=4 class="cycles"><span id="cycles">0</span> cycles</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="row-fluid log_frame" id="log_frame">
+      <div class="span12" id="log">
       </div>
     </div>
   </body>

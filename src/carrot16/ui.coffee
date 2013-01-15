@@ -86,13 +86,26 @@ updateRegisters = ->
   $("#tab1_content").scrollTop(Math.floor(address / 0x100) * 32)
   @updateMemoryView()
 
-@updateMemoryView = ->
-  if $("#tab1_content").css("display") == "none" then return
+@buildHexCell = (hex, addr) ->
+  value = @emulator.memory.peek(addr)
+  # blow away all existing classes
+  hex.attr("class", "memory_cell pointer")
+  hex.html(pad(value.toString(16), 4))
+  if addr == @emulator.registers.PC
+    hex.addClass("r_pc")
+  else if addr == @emulator.registers.SP
+    hex.addClass("r_sp")
+  else if addr != 0 and addr == @emulator.registers.IA
+    hex.addClass("r_ia")
+  else if addr in @memoryWrites
+    hex.addClass("memory_write")
+  else if addr in @memoryReads
+    hex.addClass("memory_read")
+
+@rebuildMemoryView = ->
   offset = $("#tab1_content").scrollTop() * 8
   lines = $("#memory_lines")
   dump = $("#memory_dump")
-  lines.css("top", offset / 8)
-  dump.css("top", offset / 8)
   lines.empty()
   dump.empty()
   for addr in [offset ... Math.min(0x10000, offset + 256)]
@@ -100,23 +113,29 @@ updateRegisters = ->
       lines.append(pad(addr.toString(16), 4) + ":")
       lines.append($(document.createElement("br")))
     dump.append(" ")
-    value = @emulator.memory.peek(addr)
     hex = $(document.createElement("span"))
-    hex.addClass("pointer")
-    hex.bind("click", do (value) -> (-> scrollToMemory(value)))
-    hex.append(pad(value.toString(16), 4))
-    if addr == @emulator.registers.PC
-      hex.addClass("r_pc")
-    else if addr == @emulator.registers.SP
-      hex.addClass("r_sp")
-    else if addr != 0 and addr == @emulator.registers.IA
-      hex.addClass("r_ia")
-    else if addr in @memoryWrites
-      hex.addClass("memory_write")
-    else if addr in @memoryReads
-      hex.addClass("memory_read")
+    hex.attr("id", "addr_" + pad(addr.toString(16), 4))
+    @buildHexCell(hex, addr)
+    hex.bind "click", do (hex, addr) =>
+      => @fetchInput hex, (v) => @emulator.memory.set(addr, v)
     dump.append(hex)
     if addr % 8 == 7 then dump.append($(document.createElement("br")))
+  @memoryViewOffset = offset
+
+@updateMemoryView = ->
+  if $("#tab1_content").css("display") == "none" then return
+  offset = $("#tab1_content").scrollTop() * 8
+  lines = $("#memory_lines")
+  dump = $("#memory_dump")
+  lines.css("top", offset / 8)
+  dump.css("top", offset / 8)
+  # FIXME don't rebuild if we're keyboard-editing!
+  if @memoryViewOffset != offset
+    @rebuildMemoryView()
+  else
+    for addr in [offset ... Math.min(0x10000, offset + 256)]
+      hex = $("#addr_" + pad(addr.toString(16), 4))
+      @buildHexCell(hex, addr)
 
 # build up the dump panel (lines of "offset: words...")
 buildDump = ->
@@ -162,6 +181,39 @@ assemble = ->
   matchHeight($("#code"), $("#linenums"))
   @resized()
 
+# ----- weird keyboard input logic
+
+@fetchInput = (element, callback) ->
+  if @input
+    @cancelInput()
+    return
+  @input =
+    element: element
+    color: element.css("color")
+    backgroundColor: element.css("background-color")
+    flashing: true
+    count: 4
+    callback: callback
+    blinker: setInterval((=> @blinkInput()), 250)
+    # you have ten seconds to figure it out.
+    timeout: setTimeout((=> @cancelInput()), 10000)
+  element.css("color", "#f99")
+  element.css("background-color", "#000")
+  element.html("----")
+
+@blinkInput = ->
+  @input.element.css("color", if @input.flashing then "#000" else "#f99")
+  @input.flashing = not @input.flashing
+
+@cancelInput = ->
+  @input.element.css("color", "")
+  @input.element.css("background-color", "")
+  clearTimeout(@input.timeout)
+  clearInterval(@input.blinker)
+  if @input.element.html() == "----" then @input.element.html("0000")
+  @input.callback(parseInt(@input.element.html(), 16))
+  @input = null
+
 # ----- things that must be accessible from html (globals)
 
 @goToPC = ->
@@ -173,7 +225,10 @@ assemble = ->
     if lineNumber?
       positionHighlight(lineNumber)
       scrollToLine(lineNumber)
-  
+
+@editPC = ->
+  @fetchInput $("#regPC"), (v) => @emulator.registers.PC = v
+
 @setBreakpoint = (line, isSet) ->
   if not @assembled.lineToMem(line)? then isSet = false
   @breakpoints[line] = isSet
@@ -226,6 +281,7 @@ assemble = ->
       tabContent.css("display", "none")
       tab.removeClass("tab_active")
       tab.addClass("tab_inactive")
+  @memoryViewOffset = null
   @updateViews()
 
 @load = ->
@@ -318,6 +374,16 @@ Key = carrot16.Key
 
 # return false to abort default handling of the event.
 $(document).keydown (event) =>
+  if @input?
+    # weird chrome bug.
+    if event.which == 8
+      @input.count += 1
+      if @input.count > 4 then @input.count = 4
+      @input.element.html(@input.element.html().slice(0, -1))
+      @input.callback(parseInt(@input.element.html(), 16))
+      @updateViews()
+      return false
+    return true
   switch event.which
     when Key.TAB
       if $("#tab0_content").css("display") == "none"
@@ -337,10 +403,23 @@ $(document).keydown (event) =>
     when Key.F6
       step()
       return false
-  if not @runTimer? then return true
+  if not @runTimer?
+    if event.which == 8 then return false
+    return true
   @keyboard.keydown(event.which)
 
 $(document).keypress (event) =>
+  if @input?
+    if (event.which in [0x30...0x3a]) or (event.which in [0x41...0x47]) or (event.which in [0x61...0x67])
+      if @input.element.html() == "----" then @input.element.html("")
+      @input.element.html(@input.element.html() + String.fromCharCode(event.which))
+      @input.count -= 1
+    else if (event.which == 13) or (event.which == 10)
+      @input.count = 0
+    @input.callback(parseInt(@input.element.html(), 16))
+    if @input.count == 0 then @cancelInput()
+    @updateViews()
+    return false
   switch event.which
     when 3 # ^C
       reset()
@@ -358,6 +437,7 @@ $(document).keypress (event) =>
   @keyboard.keypress(event.which)
 
 $(document).keyup (event) =>
+  if @input? then return true
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 
@@ -376,18 +456,30 @@ $(document).ready =>
   $("#load_input").bind("change", loadReally)
 
   # click on a register to view it in the memory dump (or listing, for PC)
-  $("#regPC").click(=> goToPC())
-  $("#regSP").click(=> scrollToMemory(emulator.registers.SP))
-  $("#regIA").click(=> scrollToMemory(emulator.registers.IA))
-  $("#regA").click(=> scrollToMemory(emulator.registers.A))
-  $("#regB").click(=> scrollToMemory(emulator.registers.B))
-  $("#regC").click(=> scrollToMemory(emulator.registers.C))
-  $("#regX").click(=> scrollToMemory(emulator.registers.X))
-  $("#regY").click(=> scrollToMemory(emulator.registers.Y))
-  $("#regZ").click(=> scrollToMemory(emulator.registers.Z))
-  $("#regI").click(=> scrollToMemory(emulator.registers.I))
-  $("#regJ").click(=> scrollToMemory(emulator.registers.J))
-  $("#regEX").click(=> scrollToMemory(emulator.registers.EX))
+  $("#PC").click(=> goToPC())
+  $("#regPC").click(=> @fetchInput $("#regPC"), (v) => @emulator.registers.PC = v)
+  $("#SP").click(=> scrollToMemory(emulator.registers.SP))
+  $("#regSP").click(=> @fetchInput $("#regSP"), (v) => @emulator.registers.SP = v)
+  $("#IA").click(=> scrollToMemory(emulator.registers.IA))
+  $("#regIA").click(=> @fetchInput $("#regIA"), (v) => @emulator.registers.IA = v)
+  $("#A").click(=> scrollToMemory(emulator.registers.A))
+  $("#regA").click(=> @fetchInput $("#regA"), (v) => @emulator.registers.A = v)
+  $("#B").click(=> scrollToMemory(emulator.registers.B))
+  $("#regB").click(=> @fetchInput $("#regB"), (v) => @emulator.registers.B = v)
+  $("#C").click(=> scrollToMemory(emulator.registers.C))
+  $("#regC").click(=> @fetchInput $("#regC"), (v) => @emulator.registers.C = v)
+  $("#X").click(=> scrollToMemory(emulator.registers.X))
+  $("#regX").click(=> @fetchInput $("#regX"), (v) => @emulator.registers.X = v)
+  $("#Y").click(=> scrollToMemory(emulator.registers.Y))
+  $("#regY").click(=> @fetchInput $("#regY"), (v) => @emulator.registers.Y = v)
+  $("#Z").click(=> scrollToMemory(emulator.registers.Z))
+  $("#regZ").click(=> @fetchInput $("#regZ"), (v) => @emulator.registers.Z = v)
+  $("#I").click(=> scrollToMemory(emulator.registers.I))
+  $("#regI").click(=> @fetchInput $("#regI"), (v) => @emulator.registers.I = v)
+  $("#J").click(=> scrollToMemory(emulator.registers.J))
+  $("#regJ").click(=> @fetchInput $("#regJ"), (v) => @emulator.registers.J = v)
+  $("#EX").click(=> scrollToMemory(emulator.registers.EX))
+  $("#regEX").click(=> @fetchInput $("#regEX"), (v) => @emulator.registers.EX = v)
 
   reset()
   $(window).resize (event) -> resized()

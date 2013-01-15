@@ -45,6 +45,10 @@ emulatorFiles = [
   "keyboard"
 ]
 
+synctask "clean", "clean", ->
+  run "rm -rf lib"
+  run "rm -rf js/built"
+
 synctask "build", "build javascript", ->
   run "mkdir -p lib"
   run "coffee -o lib -c src"
@@ -53,11 +57,12 @@ synctask "test", "run unit tests", ->
   run "./node_modules/mocha/bin/mocha -R Progress --compilers coffee:coffee-script --colors"
 
 synctask "web", "build emulator into javascript for browsers", ->
-  run "mkdir -p js"
+  run "mkdir -p js/built"
   files = ("src/carrot16/" + x + ".coffee" for x in emulatorFiles)
-  run "coffee -o js -j emulator-x -c " + files.join(" ")
-  run 'echo "var exports = {};" > js/emulator.js'
+  run "coffee -o js/built -j emulator-x -c " + files.join(" ")
+  run 'echo "var exports = {};" > js/built/emulator.js'
   # remove the "require" statements.
-  run 'grep -v " = require" js/emulator-x.js >> js/emulator.js'
-  run 'echo "var carrot16 = exports; delete exports;" >> js/emulator.js'
-  run "rm -f js/emulator-x.js"
+  run 'grep -v " = require" js/built/emulator-x.js >> js/built/emulator.js'
+  run 'echo "var carrot16 = exports; delete exports;" >> js/built/emulator.js'
+  run "rm -f js/built/emulator-x.js"
+  run "cp lib/carrot16/ui.js js/built/"
