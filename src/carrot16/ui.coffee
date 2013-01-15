@@ -89,7 +89,7 @@ updateRegisters = ->
 @buildHexCell = (hex, addr) ->
   value = @emulator.memory.peek(addr)
   # blow away all existing classes
-  hex.attr("class", "pointer")
+  hex.attr("class", "memory_cell pointer")
   hex.html(pad(value.toString(16), 4))
   if addr == @emulator.registers.PC
     hex.addClass("r_pc")
@@ -210,6 +210,8 @@ assemble = ->
   @input.element.css("background-color", "")
   clearTimeout(@input.timeout)
   clearInterval(@input.blinker)
+  if @input.element.html() == "----" then @input.element.html("0000")
+  @input.callback(parseInt(@input.element.html(), 16))
   @input = null
 
 # ----- things that must be accessible from html (globals)
@@ -372,7 +374,16 @@ Key = carrot16.Key
 
 # return false to abort default handling of the event.
 $(document).keydown (event) =>
-  if @inputCount? then return true
+  if @input?
+    # weird chrome bug.
+    if event.which == 8
+      @input.count += 1
+      if @input.count > 4 then @input.count = 4
+      @input.element.html(@input.element.html().slice(0, -1))
+      @input.callback(parseInt(@input.element.html(), 16))
+      @updateViews()
+      return false
+    return true
   switch event.which
     when Key.TAB
       if $("#tab0_content").css("display") == "none"
@@ -392,16 +403,18 @@ $(document).keydown (event) =>
     when Key.F6
       step()
       return false
-  if not @runTimer? then return true
+  if not @runTimer?
+    if event.which == 8 then return false
+    return true
   @keyboard.keydown(event.which)
 
 $(document).keypress (event) =>
   if @input?
     if (event.which in [0x30...0x3a]) or (event.which in [0x41...0x47]) or (event.which in [0x61...0x67])
-      if @input.element.html() == "----" then @input.element.html("0000")
-      @input.element.html(@input.element.html().slice(1, 4) + String.fromCharCode(event.which))
+      if @input.element.html() == "----" then @input.element.html("")
+      @input.element.html(@input.element.html() + String.fromCharCode(event.which))
       @input.count -= 1
-    if (event.which == 13) or (event.which == 10)
+    else if (event.which == 13) or (event.which == 10)
       @input.count = 0
     @input.callback(parseInt(@input.element.html(), 16))
     if @input.count == 0 then @cancelInput()
@@ -424,7 +437,7 @@ $(document).keypress (event) =>
   @keyboard.keypress(event.which)
 
 $(document).keyup (event) =>
-  if @inputCount? then return true
+  if @input? then return true
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 

@@ -26,6 +26,10 @@ a {
   overflow-y: no-display;
 }
 
+.pointer {
+  cursor: pointer;
+}
+
 #header {
   padding-top: 0.5em;
   padding-bottom: 1.5em;
@@ -94,9 +98,6 @@ a {
   color: gray;
   width: 4em !important;
 }
-.pointer {
-  cursor: pointer;
-}
 .linenums .breakpoint {
   background-color: #adf;
   border: 1px solid #3ab;
@@ -163,8 +164,7 @@ a {
   padding-top: 3px;
   padding-left: 0.5em;
 }
-.memory_key {
-  margin: 0px;
+.memory_cell {
   padding: 2px;
 }
 
