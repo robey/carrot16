@@ -24,7 +24,6 @@ a {
 .main {
   overflow-x: hidden;
   overflow-y: no-display;
-  padding-top: 64px;
 }
 
 /* in order to make the left panel scroll, all enclosing divs must be 100% height */
@@ -45,17 +44,20 @@ a {
   height: 1.3em;
   left: 1em;
 }
+
 .brand {
   margin-left: 1.1em !important;
 }
 
+.navbar-spacer {
+  height: 0px;
+}
 
 /* ----- left panel ----- */
 
 #left_panel {
   position: relative;
   overflow-x: hidden;
-  margin-top: 10px;
 }
 
 .tab_content {
@@ -131,12 +133,13 @@ a {
   position: relative;
   top: 0px;
   left: 0px;
-  height: 8807px;
+  xxxheight: 8807px;
   overflow-x: hidden;
 }
 #memory_linenums {
   position: relative;
   top: 0px;
+  float: left;
 
   margin-top: 3px;
   padding: 2px;
@@ -151,6 +154,7 @@ a {
 }
 #memory_dump {
   position: relative;
+  overflow-x: hidden;
   top: 0px;
   left: 0px;
 
@@ -163,8 +167,10 @@ a {
 
   border-radius: 0px 0.7em 0.7em 0px;
 }
-.memory_cell {
+.memory-cell {
   padding: 2px;
+  margin-left: 0.2em;
+  margin-right: 0.2em;
 }
 
 
@@ -176,12 +182,12 @@ a {
   float: right;
   /* exactly 10px bigger than the screen on each side */
   width: 404px;
-  margin-top: 10px;
 }
 
 .screen_frame {
   /* exactly 10px bigger than the screen on each side */
   width: 404px;
+  height: 308px;
 }
 #screen {
   background-color: black;
@@ -269,12 +275,11 @@ a {
   text-decoration: none;
 }
 .memory_read {
-  color: #f00;
+  color: #00d;
   text-decoration: none;
 }
 .memory_write {
-  background-color: #000;
-  color: #fcc;
+  color: #e00;
   text-decoration: none;
 }
 .registers td.cycles {

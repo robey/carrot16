@@ -194,13 +194,12 @@ assemble = ->
   @screen.update(@emulator.memory)
 
 @resized = ->
-  # FIXME
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
-  padding = $(".navbar").height()# + 10
-  $("#body").css("padding-top", padding)
+  padding = $(".navbar").height() + 10
+  $(".navbar-spacer").height(padding)
   $("#body").height($(window).height() - padding)
   extra = if $("#log").css("display") == "none" then 0 else $("#log").outerHeight(true)
-  $("#tab0_content").height($(window).height() - $("#tab0_content").position().top - extra)
+  $("#tab0_content").height($(window).height() - $("#tab0_content").offset().top - extra)
   $("#pane-memory").height(32 * 20 + 7)
   # compensate for extra ceremonial baggage chrome puts around a textarea
   $("#code").outerWidth($("#codebox").width())
