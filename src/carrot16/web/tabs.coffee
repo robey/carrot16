@@ -1,15 +1,13 @@
 
+# handle the navtab and showing/hiding panels
 Tabs =
   tablist: []
   activePane: null
 
   init: ->
     @tablist.push $("#tab-memory")
-    $("#tab-memory").click => @activate($("#tab-memory"))
-    # FIXME: fix name of tab1_content
-    $("#tab-memory").data("pane", $("#tab1_content"))
-    $("#tab1_content").data("tab", $("#tab-memory"))
-    $("#tab1_content").data "redraw", =>
+    @connect $("#tab-memory"), $("#pane-memory")
+    $("#pane-memory").data "redraw", =>
       updateViews()
     # FIXME:
     @tablist.push $("#fixme")
@@ -17,8 +15,19 @@ Tabs =
     @activePane.data("tab", $("#fixme"))
     $("#fixme").data("pane", @activePane)
     $("#fixme").click => @activate($("#fixme"))
+    # only one tab should be active at first
+    for tab in @tablist
+      tab.removeClass("active")
+      tab.data("pane").css("display", "none")
+    @activate($("#fixme"))
+
+  connect: (tab, pane) ->
+    tab.click => @activate(pane)
+    tab.data("pane", pane)
+    pane.data("tab", tab)
 
   activate: (tab) ->
+    if tab.hasClass("active") then return
     @activePane.data("scroll", @activePane.scrollTop())
     @activePane.css("display", "none")
     @activePane.data("tab").removeClass("active")
