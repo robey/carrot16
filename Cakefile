@@ -47,6 +47,7 @@ emulatorFiles = [
 
 webFiles = [
   "tabs",
+  "codeview",
   "memview"
 ]
 
@@ -76,5 +77,5 @@ synctask "test", "run unit tests", ->
 
 synctask "web", "build emulator into javascript for browsers", ->
   compileForWeb "carrot16", "src/carrot16", emulatorFiles, "js/built", "emulator.js"
-  compileForWeb "webui", "src/carrot16/web", webFiles, "js/built", "webui.js"
+  compileForWeb "webui", "src/carrot16/webui", webFiles, "js/built", "webui.js"
   run "cp lib/carrot16/ui.js js/built/"
