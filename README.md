@@ -28,8 +28,11 @@ open-source licensed under apache 2. patches welcome!
 
 ## to-do
 
-- disassembler (is this really necessary?)
+- load multiple files into the assembler
+- save memory image
+- load memory image
+- close assembler tab
 - assembler: string form with high bit set on last char
 - add vector display
 - add disk drive
-- make right panel be exactly the width of the monitor
+- disassembler (is this really necessary?)
