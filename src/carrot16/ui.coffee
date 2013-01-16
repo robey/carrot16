@@ -248,7 +248,9 @@ assemble = ->
   @screen.update(@emulator.memory)
 
 @resized = ->
+  # FIXME
   # lame html/css makes us recompute the size of the scrollable region for hand-holding purposes.
+  $("#body").css("padding-top", $(".navbar").height() + 10)
   extra = if $("#log").css("display") == "none" then 0 else $("#log").outerHeight(true)
   $("#tab0_content").height($(window).height() - $("#tab0_content").position().top - extra)
   $("#tab1_content").height(32 * 20 + 7)
@@ -386,10 +388,11 @@ $(document).keydown (event) =>
     return true
   switch event.which
     when Key.TAB
-      if $("#tab0_content").css("display") == "none"
-        @toggleTab(0)
-      else
-        @toggleTab(1)
+      webui.Tabs.next()
+      # if $("#tab0_content").css("display") == "none"
+      #   @toggleTab(0)
+      # else
+      #   @toggleTab(1)
       return false
     when Key.F1
       $("#load_input").click()
@@ -403,9 +406,7 @@ $(document).keydown (event) =>
     when Key.F6
       step()
       return false
-  if not @runTimer?
-    if event.which == 8 then return false
-    return true
+  if not @runTimer? then return true
   @keyboard.keydown(event.which)
 
 $(document).keypress (event) =>
@@ -480,6 +481,8 @@ $(document).ready =>
   $("#regJ").click(=> @fetchInput $("#regJ"), (v) => @emulator.registers.J = v)
   $("#EX").click(=> scrollToMemory(emulator.registers.EX))
   $("#regEX").click(=> @fetchInput $("#regEX"), (v) => @emulator.registers.EX = v)
+
+  webui.Tabs.init()
 
   reset()
   $(window).resize (event) -> resized()

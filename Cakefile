@@ -45,6 +45,23 @@ emulatorFiles = [
   "keyboard"
 ]
 
+webFiles = [
+  "tabs"
+]
+
+compileForWeb = (packageName, sourceFolder, sourceFiles, destFolder, destFile) ->
+  run "mkdir -p #{destFolder}"
+  files = ("#{sourceFolder}/" + x + ".coffee" for x in sourceFiles)
+  tempFile = "TEMP"
+  destPath = destFolder + "/" + destFile
+  tempPath = destFolder + "/" + tempFile + ".js"
+  run "coffee -o #{destFolder} -j #{tempFile} -c #{files.join(' ')}"
+  run "echo \"var exports = {};\" > #{destPath}"
+  # remove the "require" statements.
+  run "grep -v \" = require\" #{tempPath} >> #{destPath}"
+  run "echo \"var #{packageName} = exports; delete exports;\" >> #{destPath}"
+  run "rm -f #{tempPath}"
+
 synctask "clean", "clean", ->
   run "rm -rf lib"
   run "rm -rf js/built"
@@ -57,12 +74,6 @@ synctask "test", "run unit tests", ->
   run "./node_modules/mocha/bin/mocha -R Progress --compilers coffee:coffee-script --colors"
 
 synctask "web", "build emulator into javascript for browsers", ->
-  run "mkdir -p js/built"
-  files = ("src/carrot16/" + x + ".coffee" for x in emulatorFiles)
-  run "coffee -o js/built -j emulator-x -c " + files.join(" ")
-  run 'echo "var exports = {};" > js/built/emulator.js'
-  # remove the "require" statements.
-  run 'grep -v " = require" js/built/emulator-x.js >> js/built/emulator.js'
-  run 'echo "var carrot16 = exports; delete exports;" >> js/built/emulator.js'
-  run "rm -f js/built/emulator-x.js"
+  compileForWeb "carrot16", "src/carrot16", emulatorFiles, "js/built", "emulator.js"
+  compileForWeb "webui", "src/carrot16/web", webFiles, "js/built", "webui.js"
   run "cp lib/carrot16/ui.js js/built/"

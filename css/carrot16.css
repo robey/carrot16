@@ -6,7 +6,6 @@ body {
   padding-left: 1em;
   padding-right: 1em;
   height: 100%;
-  overflow-y: hidden;
 }
 a {
   text-decoration: none !important;
@@ -23,6 +22,14 @@ a {
 }
 
 .main {
+  overflow-x: hidden;
+  overflow-y: no-display;
+  padding-top: 64px;
+}
+
+/* in order to make the left panel scroll, all enclosing divs must be 100% height */
+.noscroll {
+  height: 100%;
   overflow-y: no-display;
 }
 
@@ -30,13 +37,19 @@ a {
   cursor: pointer;
 }
 
-#header {
-  padding-top: 0.5em;
-  padding-bottom: 1.5em;
+/* ----- navbar ----- */
+
+.navbar-image {
+  position: absolute;
+  top: 0.25em;
+  height: 1.3em;
+  left: 1em;
 }
-.header_image {
-  height: 48px;
+.brand {
+  margin-left: 1.1em !important;
 }
+
+
 
 .tabs {
   margin-left: 0.25em !important;
@@ -46,7 +59,7 @@ a {
 .tab_spacer {
   width: 4em !important;
 }
-.tab {
+.xtab {
   font-size: 12pt;
   padding: 2px 7px;
   border-radius: 0.5em 0.5em 0px 0px;
@@ -63,17 +76,12 @@ a {
   color: #57C !important;
 }
 
-/* in order to make the left panel scroll, all enclosing divs must be 100% height */
-.noscroll {
-  height: 100%;
-  overflow-y: no-display;
-}
 
 /* ----- left panel ----- */
 
 #left_panel {
   position: relative;
-  float: left;
+  overflow-x: hidden;
 }
 
 .tab_content {
