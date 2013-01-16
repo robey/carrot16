@@ -50,38 +50,12 @@ a {
 }
 
 
-
-.tabs {
-  margin-left: 0.25em !important;
-  padding: 0px 10px;
-  top: 4em;
-}
-.tab_spacer {
-  width: 4em !important;
-}
-.xtab {
-  font-size: 12pt;
-  padding: 2px 7px;
-  border-radius: 0.5em 0.5em 0px 0px;
-  margin: 0px 2px;
-  min-height: 0px;  /* override bootstrap */
-}
-.tab_active {
-  background-color: #8AE;
-  color: white !important;
-  text-decoration: none;
-}
-.tab_inactive {
-  background-color: #eee;
-  color: #57C !important;
-}
-
-
 /* ----- left panel ----- */
 
 #left_panel {
   position: relative;
   overflow-x: hidden;
+  margin-top: 10px;
 }
 
 .tab_content {
@@ -158,23 +132,42 @@ a {
   top: 0px;
   left: 0px;
   height: 8807px;
+  overflow-x: hidden;
 }
-#memory_lines {
+#memory_linenums {
   position: relative;
   top: 0px;
+
+  margin-top: 3px;
+  padding: 2px;
+  padding-right: 0.7em;
+
+  text-align: right;
+  color: white;
+  background-color: #444;
+  width: 4em !important;
+
+  border-radius: 0.7em 0px 0px 0.7em;
 }
 #memory_dump {
   position: relative;
   top: 0px;
   left: 0px;
-  border: solid 2px #ccc;
-  border-radius: 2px;
-  padding-top: 3px;
-  padding-left: 0.5em;
+
+  margin-top: 3px;
+  margin-left: 0px !important;
+
+  padding: 2px;
+  padding-left: 0.4em;
+  background-color: #eee;
+
+  border-radius: 0px 0.7em 0.7em 0px;
 }
 .memory_cell {
   padding: 2px;
 }
+
+
 
 /* ----- right panel ----- */
 
@@ -183,6 +176,7 @@ a {
   float: right;
   /* exactly 10px bigger than the screen on each side */
   width: 404px;
+  margin-top: 10px;
 }
 
 .screen_frame {
