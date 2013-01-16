@@ -101,19 +101,17 @@
 
       <!-- panel with active tab -->
       <div class="noscroll" id="left_panel">
-        <div class="row-fluid pane pane-editor">
+
+        <!-- prototype editor pane -->
+        <div class="row-fluid pane pane-editor" id="codeview-prototype">
           <div class="span1 mono pointer linenums">
             <div>
-              <span id="line_highlight"></span>
+              <span class="code-highlight-line code-pc-line"></span>
             </div>
-            <div id="linenums">
-              <span class="linenum" id="ln1">1</span>
-              <span class="linenum breakpoint" id="ln2">2</span>
-              <span class="linenum" id="ln3">3</span>
-            </div>
+            <div class="code-linenums"></div>
           </div>
-          <div class="span7 editor_div" id="codebox">
-            <textarea class="mono editor" id="code" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
+          <div class="span7 code-box">
+            <textarea class="mono code-textarea" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
 set a, 0
 set b, 0x80
 hwi 1
@@ -141,19 +139,15 @@ jmp go
 SUB PC, 1
 </textarea>
           </div>
-          <div class="span1 mono linenums addr" id="offsets">
-          </div>
-          <div class="span3 mono dump" id="dump">
-          </div>
+          <div class="span1 mono linenums code-addr"></div>
+          <div class="span3 mono code-dump"></div>
         </div>
 
-        <!-- memory view panel -->
+        <!-- memory view pane -->
         <div class="row-fluid pane" id="pane-memory" onscroll="webui.MemView.update()">
           <div id="memory_view">
-            <div class="mono" id="memory_linenums">
-            </div>
-            <div class="mono editor_div" id="memory_dump">
-            </div>
+            <div class="mono" id="memory_linenums"></div>
+            <div class="mono" id="memory_dump"></div>
           </div>
         </div>
       </div>

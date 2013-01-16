@@ -51,7 +51,7 @@ scrollToLine = (lineNumber) ->
     codeTab.scrollTop((lineNumber + 2 - codeTabLines) * lineHeight)
 
 positionHighlight = (lineNumber) ->
-  highlight = $("#line_highlight")
+  highlight = $(".code-pc-line")
   if lineNumber?
     highlight.css("top", (lineNumber * highlight.height() + 5) + "px")
     highlight.css("display", "block")
@@ -84,25 +84,25 @@ updateRegisters = ->
 
 # build up the dump panel (lines of "offset: words...")
 buildDump = ->
-  $("#offsets").empty()
-  $("#dump").empty()
+  $(".code-addr").empty()
+  $(".code-dump").empty()
   if @assembled.errorCount > 0 then return
 
   for info in @assembled.lines
     if info.data.length == 0
-      $("#offsets").append("<br/>")
-      $("#dump").append("<br/>")
+      $(".code-addr").append("<br/>")
+      $(".code-dump").append("<br/>")
     else
-      $("#offsets").append(pad(info.org.toString(16), 4) + ":<br/>")
-      $("#dump").append((for x in info.data then pad(x.toString(16), 4)).join(" ") + "<br/>")
+      $(".code-addr").append(pad(info.org.toString(16), 4) + ":<br/>")
+      $(".code-dump").append((for x in info.data then pad(x.toString(16), 4)).join(" ") + "<br/>")
 
 assemble = ->
-  lines = $("#code").val().split("\n")
+  lines = $(".code-textarea").val().split("\n")
 
   linenums = (for i in [0 ... lines.length]
     "<span class=linenum id=ln#{i} onclick='toggleBreakpoint(#{i})'>#{i + 1}</span>"
   ).join("")
-  $("#linenums").html(linenums)
+  $(".code-linenums").html(linenums)
   $("#log").empty()
   $("#log").css("display", "none")
   @resized()
@@ -116,15 +116,14 @@ assemble = ->
   @assembled = asm.compile(lines)
 
   if @assembled.errorCount == 0
-    buffer = @assembled.createImage()
-    @emulator.memory.flash(buffer)
+    buffer = @assembled.createImage(@emulator.memory.memory)
     # turn off breakpoints that aren't code anymore.
     for line, isSet of @breakpoints #when isSet
       @setBreakpoint(line, isSet)
 
   # update UI
   buildDump()
-  matchHeight($("#code"), $("#linenums"))
+  matchHeight($(".code-textarea"), $(".code-linenums"))
   @resized()
 
 # ----- weird keyboard input logic
@@ -202,7 +201,7 @@ assemble = ->
   $(".pane-editor").height($(window).height() - $(".pane-editor").offset().top - extra)
   $("#pane-memory").height(32 * 20 + 7)
   # compensate for extra ceremonial baggage chrome puts around a textarea
-  $("#code").outerWidth($("#codebox").width())
+  $(".code-textarea").outerWidth($(".code-box").width())
   @updateViews()
 
 @codeEdited = ->

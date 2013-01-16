@@ -38,9 +38,6 @@ class Memory
   clear: ->
     for i in [0 ... 0x10000] then if @memory[i] then @memory[i] = 0
 
-  flash: (buffer) ->
-    @memory = buffer
-
   get: (n) ->
     @readWatches.get(n).map (f) => f(n)
     @peek(n)

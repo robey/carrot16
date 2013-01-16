@@ -96,10 +96,12 @@ a {
   padding-bottom: 1px;
   padding-right: 5px;
 }
-.addr {
+
+.code-addr {
   margin-left: 0px !important;
 }
-.dump {
+
+.code-dump {
   margin-left: 1.0em !important;
   padding-top: 6px;
   white-space: nowrap;
@@ -107,8 +109,7 @@ a {
   overflow-x: hidden;
 }
 
-#line_highlight {
-  background-color: #afa;
+.code-highlight-line {
   position: absolute;
   left: 0;
   top: 6px;
@@ -117,10 +118,15 @@ a {
   z-index: -1000;
 }
 
-.editor_div {
+.code-pc-line {
+  background-color: #afa;
+}
+
+.code-box {
   margin-left: 0.5em !important;
 }
-.editor {
+
+.code-textarea {
   color: black;
   width: 100%;
   min-height: 20em;
@@ -133,7 +139,6 @@ a {
   position: relative;
   top: 0px;
   left: 0px;
-  xxxheight: 8807px;
   overflow-x: hidden;
 }
 
