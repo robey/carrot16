@@ -99,13 +99,9 @@
         </div>
       </div>
 
-
-
-
-      <div class=" noscroll" id="left_panel">
-
-
-        <div class="row-fluid tab_content" id="tab0_content">
+      <!-- panel with active tab -->
+      <div class="noscroll" id="left_panel">
+        <div class="row-fluid pane pane-editor">
           <div class="span1 mono pointer linenums">
             <div>
               <span id="line_highlight"></span>
@@ -152,7 +148,7 @@ SUB PC, 1
         </div>
 
         <!-- memory view panel -->
-        <div class="row-fluid tab_content" id="pane-memory" onscroll="webui.MemView.update()">
+        <div class="row-fluid pane" id="pane-memory" onscroll="webui.MemView.update()">
           <div id="memory_view">
             <div class="mono" id="memory_linenums">
             </div>

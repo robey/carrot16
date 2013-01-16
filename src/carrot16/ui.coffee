@@ -37,7 +37,7 @@ scrollToLine = (lineNumber) ->
   if (not line?) or (not line.offset()?) then return
   lineTop = line.offset().top
 
-  codeTab = $("#tab0_content")
+  codeTab = $(".pane-editor")
   if codeTab.css("display") == "none" then return
   lineHeight = parseInt(codeTab.css("line-height"))
   log = $("#log")
@@ -163,7 +163,7 @@ assemble = ->
 # ----- things that must be accessible from html (globals)
 
 @goToPC = ->
-  if $("#tab0_content").css("display") == "none"
+  if $(".pane-editor").css("display") == "none"
     @webui.MemView.scrollTo(@emulator.registers.PC)
   else
     if not @assembled? then return
@@ -199,7 +199,7 @@ assemble = ->
   $(".navbar-spacer").height(padding)
   $("#body").height($(window).height() - padding)
   extra = if $("#log").css("display") == "none" then 0 else $("#log").outerHeight(true)
-  $("#tab0_content").height($(window).height() - $("#tab0_content").offset().top - extra)
+  $(".pane-editor").height($(window).height() - $(".pane-editor").offset().top - extra)
   $("#pane-memory").height(32 * 20 + 7)
   # compensate for extra ceremonial baggage chrome puts around a textarea
   $("#code").outerWidth($("#codebox").width())

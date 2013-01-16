@@ -7,11 +7,10 @@ Tabs =
   init: ->
     @tablist.push $("#tab-memory")
     @connect $("#tab-memory"), $("#pane-memory")
-    $("#pane-memory").data "redraw", =>
-      updateViews()
+    $("#pane-memory").data "redraw", => webui.MemView.update()
     # FIXME:
     @tablist.push $("#fixme")
-    @activePane = $("#tab0_content")
+    @activePane = $(".pane-editor")
     @activePane.data("tab", $("#fixme"))
     $("#fixme").data("pane", @activePane)
     $("#fixme").click => @activate($("#fixme"))
@@ -22,7 +21,7 @@ Tabs =
     @activate($("#fixme"))
 
   connect: (tab, pane) ->
-    tab.click => @activate(pane)
+    tab.click => @activate(tab)
     tab.data("pane", pane)
     pane.data("tab", tab)
 
