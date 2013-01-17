@@ -9,6 +9,7 @@ class CodeView
     @pane = $("#codeview-prototype").clone()
     @pane.attr("id", @name)
     @pane.data "redraw", => @update()
+    @pane.data "codeview", @
     @tab = $(".code-tab-prototype").clone()
     @tab.attr("id", @tabName)
     $(".nav").data("robey", @tab)
@@ -17,8 +18,8 @@ class CodeView
     webui.Tabs.connect @tab, @pane
     CodeViewSet.views.push(@)
     @textarea = $("##{@name} .code-textarea")
-    @textarea.bind "oninput", => @codeEdited()
-    @textarea.bind "onchange", => @codeChanged()
+    @textarea.bind "input", => @codeEdited()
+    @textarea.bind "change", => @codeChanged()
     @linenums = $("##{@name} .code-linenums")
     @codebox = $("##{@name} .code-box")
     @pcline = $("##{@name} .code-pc-line")
@@ -48,7 +49,7 @@ class CodeView
 
   codeEdited: ->
     if @typingTimer? then clearTimeout(@typingTimer)
-    @typingTimer = setTimeout(@codeChanged, @typingDelay)
+    @typingTimer = setTimeout((=> @codeChanged()), @typingDelay)
 
   # rebuild line number column, and resize textarea if necessary.
   update: ->
@@ -114,7 +115,7 @@ class CodeView
     linenum.text(sprintf("%5d", n + 1))
     linenum.click => @scrollToLine(n)
     line = $("<span />")
-    line.append(span)
+    line.append(linenum)
     line.append(": #{message}")
     webui.LogPane.log(line)
     $("#line#{n}-#{@name}").css("background-color", "#f88")
@@ -125,6 +126,7 @@ class CodeView
     @assembled = asm.compile(@getCode())
     if @assembled.errorCount > 0
       @assembled = null
+      @buildDump()
       return false
     # kinda cheat by poking directly into memory.
     @assembled.createImage(emulator.memory.memory)
@@ -138,6 +140,7 @@ class CodeView
   buildDump: ->
     @addrDiv.empty()
     @dumpDiv.empty()
+    @updatePcHighlight()
     if not @assembled? then return
     for info in @assembled.lines
       if info.data.length > 0

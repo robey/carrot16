@@ -19,7 +19,7 @@ LogPane =
     if @visible() then @pane.position().top else $(window).height()
 
   log: (message) ->
-    if not @visible?
+    if not @visible()
       @pane.css("display", "block")
       webui.CodeViewSet.resizeAll()
     @pane.append(message)
