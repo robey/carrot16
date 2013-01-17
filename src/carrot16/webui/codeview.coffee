@@ -67,6 +67,7 @@ class CodeView
     @resize()
 
   resize: ->
+    # compensate for extra ceremonial baggage chrome puts around a textarea.
     @textarea.outerWidth(@codebox.width())
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
     @updatePcHighlight()
@@ -98,7 +99,7 @@ class CodeView
 
   setBreakpoint: (linenum, isSet) ->
     if not @assembled?.lineToMem(linenum)? then isSet = false
-    line = $("#line#{n}-#{@name}")
+    line = $("#line#{linenum}-#{@name}")
     @breakpoints[linenum] = isSet
     if isSet
       line.addClass("breakpoint")
@@ -106,7 +107,7 @@ class CodeView
       line.removeClass("breakpoint")
 
   toggleBreakpoint: (linenum) ->
-    @setBreakpoint(linenum, not @breakpoints[line])
+    @setBreakpoint(linenum, not @breakpoints[linenum])
 
   logError: (n, message) ->
     linenum = $("<span />")
@@ -121,6 +122,7 @@ class CodeView
     $("#line#{n}-#{@name}").css("background-color", "#f88")
 
   assemble: ->
+    @debug "assemble"
     logger = (n, pos, message) => @logError(n, message)
     asm = new d16bunny.Assembler(logger)
     @assembled = asm.compile(@getCode())
@@ -144,11 +146,19 @@ class CodeView
     if not @assembled? then return
     for info in @assembled.lines
       if info.data.length > 0
-        @addrDiv.append(sprintf("%04x:", info.org))
+        addr = info.org
+        span = $("<span />")
+        span.text(sprintf("%04x:", addr))
+        span.addClass("pointer")
+        do (addr) =>
+          span.click(=> webui.MemView.scrollTo(addr))
+        @addrDiv.append(span)
         @dumpDiv.append((for x in info.data then sprintf("%04x", x)).join(" "))
       @addrDiv.append("<br/>")
       @dumpDiv.append("<br/>")
 
+  debug: (message) ->
+    console.log "[#{@name}] #{message}"
 
 CodeViewSet =
   id: 1

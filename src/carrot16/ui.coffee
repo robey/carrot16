@@ -1,11 +1,4 @@
 
-# typing has to pause for this long (in milliseconds) before we'll try to recompile.
-@typingDelay = 250
-@typingTimer = null
-
-@breakpoints = {}
-@assembled = null
-@scrollTop = []
 @memoryReads = []
 @memoryWrites = []
 
@@ -17,105 +10,6 @@
 @CLOCK_SPEED_HZ = 100000
 @CYCLES_PER_SLICE = Math.floor(@CLOCK_SPEED_HZ * 1.0 / @TIME_SLICE_MSEC)
 
-pad = (num, width) ->
-  num = num.toString()
-  len = num.length
-  ([0 ... width - len].map -> "0").join("") + num
-
-# jquery makes this kinda trivial.
-matchHeight = (dest, source) ->
-  dest.css("height", source.css("height"))
-
-# scroll the code-view so that the currently-running line is visible.
-scrollToLine = (lineNumber) ->
-  line = $("#ln#{lineNumber}")
-  if (not line?) or (not line.offset()?) then return
-  lineTop = line.offset().top
-
-  codeTab = $(".pane-editor")
-  if codeTab.css("display") == "none" then return
-  lineHeight = parseInt(codeTab.css("line-height"))
-  top = codeTab.position().top
-  bottom = Math.min(top + codeTab.height(), webui.LogPane.top())
-  codeTabLines = Math.floor((bottom - top) / lineHeight)
-  if lineTop < top + lineHeight
-    codeTab.scrollTop(if lineNumber == 0 then 0 else (lineNumber - 1) * lineHeight)
-  else if lineTop > bottom - lineHeight
-    codeTab.scrollTop((lineNumber + 2 - codeTabLines) * lineHeight)
-
-positionHighlight = (lineNumber) ->
-  highlight = $(".code-pc-line")
-  if lineNumber?
-    highlight.css("top", (lineNumber * highlight.height() + 5) + "px")
-    highlight.css("display", "block")
-  else
-    highlight.css("display", "none")
-
-updateHighlight = (alsoScroll) ->
-  if @assembled?
-    lineNumber = @assembled.memToLine(@emulator.registers.PC)
-    positionHighlight(lineNumber)
-    if (alsoScroll) then scrollToLine(lineNumber)
-  else
-    positionHighlight(null)
-
-updateRegisters = ->
-  for r, v of @emulator.registers
-    $("#reg#{r}").html(pad(v.toString(16), 4))
-  $("#cycles").html(@emulator.cycles)
-  # update cpu heat meter
-  lowColor = [ 127, 0, 0 ]
-  hiColor = [ 255, 0, 0 ]
-  # my kingdom for Array.zip
-  color = [0...3].map (i) =>
-    Math.floor(lowColor[i] + @cpuHeat * (hiColor[i] - lowColor[i]))
-  canvas = $("#cpu_heat")[0].getContext("2d")
-  canvas.fillStyle = "#fff"
-  canvas.fillRect(0, 0, 1, 100)
-  canvas.fillStyle = "rgb(#{color[0]},#{color[1]},#{color[2]})"
-  canvas.fillRect(0, Math.floor(100 * (1.0 - @cpuHeat)), 1, 100)
-
-# build up the dump panel (lines of "offset: words...")
-buildDump = ->
-  $(".code-addr").empty()
-  $(".code-dump").empty()
-  if @assembled.errorCount > 0 then return
-
-  for info in @assembled.lines
-    if info.data.length == 0
-      $(".code-addr").append("<br/>")
-      $(".code-dump").append("<br/>")
-    else
-      $(".code-addr").append(pad(info.org.toString(16), 4) + ":<br/>")
-      $(".code-dump").append((for x in info.data then pad(x.toString(16), 4)).join(" ") + "<br/>")
-
-assemble = ->
-  lines = $(".code-textarea").val().split("\n")
-
-  linenums = (for i in [0 ... lines.length]
-    "<span class=linenum id=ln#{i} onclick='toggleBreakpoint(#{i})'>#{i + 1}</span>"
-  ).join("")
-  $(".code-linenums").html(linenums)
-  webui.LogPane.clear()
-
-  emulator.clearMemory()
-
-  logger = (lineno, pos, message) =>
-    webui.LogPane.log("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}")
-    $("#ln#{lineno}").css("background-color", "#f88")
-  asm = new d16bunny.Assembler(logger)
-  @assembled = asm.compile(lines)
-
-  if @assembled.errorCount == 0
-    buffer = @assembled.createImage(@emulator.memory.memory)
-    # turn off breakpoints that aren't code anymore.
-    for line, isSet of @breakpoints #when isSet
-      @setBreakpoint(line, isSet)
-
-  # update UI
-  buildDump()
-  matchHeight($(".code-textarea"), $(".code-linenums"))
-  @resized()
 
 # ----- weird keyboard input logic
 
@@ -152,36 +46,11 @@ assemble = ->
 
 # ----- things that must be accessible from html (globals)
 
-@goToPC = ->
-  if $(".pane-editor").css("display") == "none"
-    @webui.MemView.scrollTo(@emulator.registers.PC)
-  else
-    if not @assembled? then return
-    lineNumber = @assembled.memToClosestLine(@emulator.registers.PC)
-    if lineNumber?
-      positionHighlight(lineNumber)
-      scrollToLine(lineNumber)
-
-@editPC = ->
-  @fetchInput $("#regPC"), (v) => @emulator.registers.PC = v
-
-@setBreakpoint = (line, isSet) ->
-  if not @assembled.lineToMem(line)? then isSet = false
-  @breakpoints[line] = isSet
-  if isSet
-    $("#ln#{line}").addClass("breakpoint")
-  else
-    $("#ln#{line}").removeClass("breakpoint")
-
-@toggleBreakpoint = (line) ->
-  @setBreakpoint(line, not @breakpoints[line])
-
 @updateViews = (options) ->
   # FIXME: if @emulator.onFire then: show cool fire image.
-  updateHighlight(options?.scroll)
   webui.MemView.update()
   webui.CodeViewSet.updateAll()
-  updateRegisters()
+  webui.Registers.update()
   @screen.update(@emulator.memory)
 
 @resized = ->
@@ -189,21 +58,8 @@ assemble = ->
   padding = $(".navbar").height() + 10
   $(".navbar-spacer").height(padding)
   $("#body").height($(window).height() - padding)
-  $(".pane-editor").height($(window).height() - $(".pane-editor").offset().top - webui.LogPane.height())
-  $("#pane-memory").height(32 * 20 + 7)
-  # compensate for extra ceremonial baggage chrome puts around a textarea
-  $(".code-textarea").outerWidth($(".code-box").width())
+  webui.MemView.resized()
   @updateViews()
-
-@codeEdited = ->
-  if @typingTimer? then clearTimeout(@typingTimer)
-  @typingTimer = setTimeout(@codeChanged, @typingDelay)
-
-@codeChanged = ->
-  @typingTimer = null
-  @emulator.reset()
-  @screen.reset()
-  assemble()
 
 @load = ->
   $("#load_input").click()
@@ -375,32 +231,7 @@ $(document).ready =>
   # thread "load" clicks through to the real file loader. (the web sucks.)
   $("#load_input").bind("change", loadReally)
 
-  # click on a register to view it in the memory dump (or listing, for PC)
-  $("#PC").click(=> goToPC())
-  $("#regPC").click(=> @fetchInput $("#regPC"), (v) => @emulator.registers.PC = v)
-  $("#SP").click(=> webui.MemView.scrollTo(emulator.registers.SP))
-  $("#regSP").click(=> @fetchInput $("#regSP"), (v) => @emulator.registers.SP = v)
-  $("#IA").click(=> webui.MemView.scrollTo(emulator.registers.IA))
-  $("#regIA").click(=> @fetchInput $("#regIA"), (v) => @emulator.registers.IA = v)
-  $("#A").click(=> webui.MemView.scrollTo(emulator.registers.A))
-  $("#regA").click(=> @fetchInput $("#regA"), (v) => @emulator.registers.A = v)
-  $("#B").click(=> webui.MemView.scrollTo(emulator.registers.B))
-  $("#regB").click(=> @fetchInput $("#regB"), (v) => @emulator.registers.B = v)
-  $("#C").click(=> webui.MemView.scrollTo(emulator.registers.C))
-  $("#regC").click(=> @fetchInput $("#regC"), (v) => @emulator.registers.C = v)
-  $("#X").click(=> webui.MemView.scrollTo(emulator.registers.X))
-  $("#regX").click(=> @fetchInput $("#regX"), (v) => @emulator.registers.X = v)
-  $("#Y").click(=> webui.MemView.scrollTo(emulator.registers.Y))
-  $("#regY").click(=> @fetchInput $("#regY"), (v) => @emulator.registers.Y = v)
-  $("#Z").click(=> webui.MemView.scrollTo(emulator.registers.Z))
-  $("#regZ").click(=> @fetchInput $("#regZ"), (v) => @emulator.registers.Z = v)
-  $("#I").click(=> webui.MemView.scrollTo(emulator.registers.I))
-  $("#regI").click(=> @fetchInput $("#regI"), (v) => @emulator.registers.I = v)
-  $("#J").click(=> webui.MemView.scrollTo(emulator.registers.J))
-  $("#regJ").click(=> @fetchInput $("#regJ"), (v) => @emulator.registers.J = v)
-  $("#EX").click(=> webui.MemView.scrollTo(emulator.registers.EX))
-  $("#regEX").click(=> @fetchInput $("#regEX"), (v) => @emulator.registers.EX = v)
-
+  webui.Registers.init()
   webui.Tabs.init()
 
   reset()

@@ -6,17 +6,21 @@ MemView =
 
   scrollTo: (addr) ->
     webui.Tabs.activate $("#tab-memory")
+    @checkWidth()
     page = @windowRows * @columns
     $("#pane-memory").scrollTop(Math.floor(addr / page) * @windowRows)
     @update()
 
+  visible: ->
+    $("#pane-memory").css("display") != "none"
+
+  resized: ->
+    @columns = null
+    @offset = null
+
   update: ->
-    if $("#pane-memory").css("display") == "none" then return
-    if not @columns?
-      @checkWidth()
-      rows = 0x10000 / @columns
-      lineHeight = 20
-      $("#memory_view").height(rows + (@windowRows - 1) * lineHeight - 5)
+    if not @visible() then return
+    @checkWidth()
     offset = $("#pane-memory").scrollTop() * @columns
     lines = $("#memory_linenums")
     dump = $("#memory_dump")
@@ -28,9 +32,20 @@ MemView =
     else
       @rebuild(offset, lines, dump)
 
-  # figure out if we can fit 16 words wide (and do so)
+  # ensure that we've cached the width
   checkWidth: ->
+    if @columns? then return
+    @determineWidth()
+    rows = 0x10000 / @columns
+    lineHeight = 20
+    $("#memory_view").height(rows + (@windowRows - 1) * lineHeight - 5)
+
+  # figure out if we can fit 16 words wide (and do so)
+  determineWidth: ->
+    @debug "determine width"
     dump = $("#memory_dump")
+    dump.css("width", "100%")
+    dump.empty()
     for cols in [ 16, 8 ]
       line = $("<span/>")
       for i in [0 ... cols]
@@ -43,6 +58,7 @@ MemView =
         # found one that fits!
         @columns = cols
         dump.width(line.width() + 10)
+        @debug "going with width of #{@columns}"
         return
     @columns = 8
 
@@ -88,6 +104,9 @@ MemView =
       cell.addClass("memory_write")
     else if addr in memoryReads
       cell.addClass("memory_read")
+
+  debug: (message) ->
+    console.log "[memview] #{message}"
 
 
 exports.MemView = MemView
