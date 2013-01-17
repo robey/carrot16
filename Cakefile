@@ -47,6 +47,7 @@ emulatorFiles = [
 
 webFiles = [
   "tabs",
+  "registers",
   "codeview",
   "memview",
   "logpane"
