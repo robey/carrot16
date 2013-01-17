@@ -32,6 +32,7 @@ class RangeMap
 class Memory
   constructor: ->
     @memory = []
+    @memory[0xffff] = 0
     @readWatches = new RangeMap()
     @writeWatches = new RangeMap()
 
