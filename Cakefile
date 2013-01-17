@@ -48,7 +48,8 @@ emulatorFiles = [
 webFiles = [
   "tabs",
   "codeview",
-  "memview"
+  "memview",
+  "logpane"
 ]
 
 compileForWeb = (packageName, sourceFolder, sourceFiles, destFolder, destFile) ->
