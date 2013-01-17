@@ -83,10 +83,8 @@ class CodeView
     top = @pane.position().top
     bottom = Math.min(top + @pane.height(), webui.LogPane.top())
     visibleLines = Math.floor((bottom - top) / lineHeight)
-    if lineTop < top + lineHeight
-      @pane.scrollTop(if n == 0 then 0 else (n - 1) * lineHeight)
-    else if lineTop > bottom - (3 * lineHeight)
-      @pane.scrollTop((n + 3 - visibleLines) * lineHeight)
+    if lineTop < top + lineHeight or lineTop > bottom - (3 * lineHeight)
+      @pane.scrollTop(if n < 2 then 0 else (n - 2) * lineHeight)
 
 
 CodeViewSet =
