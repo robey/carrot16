@@ -22,6 +22,10 @@ class CodeView
     @linenums = $("##{@name} .code-linenums")
     @codebox = $("##{@name} .code-box")
     @pcline = $("##{@name} .code-pc-line")
+    @addrDiv = $("##{@name} .code-addr")
+    @dumpDiv = $("##{@name} .code-dump")
+    @assembled = null
+    @breakpoints = {}
 
   setName: (name) ->
     $("##{@tabName} a").text(name)
@@ -39,6 +43,7 @@ class CodeView
 
   codeChanged: ->
     @typingTimer = null
+    @update()
     reset()
 
   codeEdited: ->
@@ -47,7 +52,6 @@ class CodeView
 
   # rebuild line number column, and resize textarea if necessary.
   update: ->
-    console.log "redraw!"
     lines = @getCode()
     @linenums.empty()
     for i in [0 ... lines.length]
@@ -66,11 +70,12 @@ class CodeView
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
     @updatePcHighlight()
 
-  updatePcHighlight: ->
-    n = assembled?.memToLine(emulator.registers.PC)
+  updatePcHighlight: (alsoScroll) ->
+    n = @assembled?.memToLine(emulator.registers.PC)
     if n?
       @pcline.css("top", (n * @pcline.height()) + 5)
       @pcline.css("display", "block")
+      if alsoScroll then @scrollToLine(n)
     else
       @pcline.css("display", "none")
 
@@ -85,6 +90,61 @@ class CodeView
     visibleLines = Math.floor((bottom - top) / lineHeight)
     if lineTop < top + lineHeight or lineTop > bottom - (3 * lineHeight)
       @pane.scrollTop(if n < 2 then 0 else (n - 2) * lineHeight)
+
+  clearBreakpoints: ->
+    @breakpoints = {}
+    @update()
+
+  setBreakpoint: (linenum, isSet) ->
+    if not @assembled?.lineToMem(linenum)? then isSet = false
+    line = $("#line#{n}-#{@name}")
+    @breakpoints[linenum] = isSet
+    if isSet
+      line.addClass("breakpoint")
+    else
+      line.removeClass("breakpoint")
+
+  toggleBreakpoint: (linenum) ->
+    @setBreakpoint(linenum, not @breakpoints[line])
+
+  logError: (n, message) ->
+    linenum = $("<span />")
+    linenum.addClass("line")
+    linenum.addClass("pointer")
+    linenum.text(sprintf("%5d", n + 1))
+    linenum.click => @scrollToLine(n)
+    line = $("<span />")
+    line.append(span)
+    line.append(": #{message}")
+    webui.LogPane.log(line)
+    $("#line#{n}-#{@name}").css("background-color", "#f88")
+
+  assemble: ->
+    logger = (n, pos, message) => @logError(n, message)
+    asm = new d16bunny.Assembler(logger)
+    @assembled = asm.compile(@getCode())
+    if @assembled.errorCount > 0
+      @assembled = null
+      return false
+    # kinda cheat by poking directly into memory.
+    @assembled.createImage(emulator.memory.memory)
+    # turn off breakpoints that aren't code anymore.
+    for line, isSet of @breakpoints #when isSet
+      @setBreakpoint(line, isSet)
+    @buildDump()
+    true
+
+  # build up the dump panel (lines of "offset: words...")
+  buildDump: ->
+    @addrDiv.empty()
+    @dumpDiv.empty()
+    if not @assembled? then return
+    for info in @assembled.lines
+      if info.data.length > 0
+        @addrDiv.append(sprintf("%04x:", info.org))
+        @dumpDiv.append((for x in info.data then sprintf("%04x", x)).join(" "))
+      @addrDiv.append("<br/>")
+      @dumpDiv.append("<br/>")
 
 
 CodeViewSet =
@@ -102,38 +162,21 @@ CodeViewSet =
   resizeAll: ->
     for v in @views then v.resize()
 
+  updateAll: ->
+    for v in @views
+      v.update()
+      v.updatePcHighlight(true)
+
   assemble: ->
     webui.LogPane.clear()
     emulator.clearMemory()
-  #   for view in views
 
-
-
-
-  # logger = (lineno, pos, message) =>
-  #   span = $("<span />")
-  #   span.addClass("line")
-  #   span.addClass("pointer")
-  #   span.text(sprintf("%5d", lineno + 1))
-  #   line = $("<span />")
-  #   line.append(span)
-  #   line.append(": " + message)
-  #   webui.LogPane.log(line)
-  #   $("#ln#{lineno}").css("background-color", "#f88")
-  # asm = new d16bunny.Assembler(logger)
-  # @assembled = asm.compile(lines)
-
-  # if @assembled.errorCount == 0
-  #   buffer = @assembled.createImage(@emulator.memory.memory)
-  #   # turn off breakpoints that aren't code anymore.
-  #   for line, isSet of @breakpoints #when isSet
-  #     @setBreakpoint(line, isSet)
-
-  # # update UI
-  # buildDump()
-  # matchHeight($(".code-textarea"), $(".code-linenums"))
-  # @resized()
-
+    for view in @views
+      if not view.assemble()
+        # go to the error.
+        view.activate()
+        return false
+    true
 
 
 exports.CodeView = CodeView

@@ -26,11 +26,6 @@ pad = (num, width) ->
 matchHeight = (dest, source) ->
   dest.css("height", source.css("height"))
 
-@log = (message) ->
-  $("#log").css("display", "block")
-  $("#log").append(message)
-  @resized()
-
 # scroll the code-view so that the currently-running line is visible.
 scrollToLine = (lineNumber) ->
   line = $("#ln#{lineNumber}")
@@ -40,10 +35,8 @@ scrollToLine = (lineNumber) ->
   codeTab = $(".pane-editor")
   if codeTab.css("display") == "none" then return
   lineHeight = parseInt(codeTab.css("line-height"))
-  log = $("#log")
   top = codeTab.position().top
-  bottom = top + codeTab.height()
-  if log.css("display") != "none" then bottom = Math.min(bottom, log.position().top)
+  bottom = Math.min(top + codeTab.height(), webui.LogPane.top())
   codeTabLines = Math.floor((bottom - top) / lineHeight)
   if lineTop < top + lineHeight
     codeTab.scrollTop(if lineNumber == 0 then 0 else (lineNumber - 1) * lineHeight)
@@ -103,14 +96,12 @@ assemble = ->
     "<span class=linenum id=ln#{i} onclick='toggleBreakpoint(#{i})'>#{i + 1}</span>"
   ).join("")
   $(".code-linenums").html(linenums)
-  $("#log").empty()
-  $("#log").css("display", "none")
-  @resized()
+  webui.LogPane.clear()
 
   emulator.clearMemory()
 
   logger = (lineno, pos, message) =>
-    @log("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}<br/>")
+    webui.LogPane.log("<span class='line'>#{pad(lineno + 1, 5)}:</span> #{message}")
     $("#ln#{lineno}").css("background-color", "#f88")
   asm = new d16bunny.Assembler(logger)
   @assembled = asm.compile(lines)
@@ -189,6 +180,7 @@ assemble = ->
   # FIXME: if @emulator.onFire then: show cool fire image.
   updateHighlight(options?.scroll)
   webui.MemView.update()
+  webui.CodeViewSet.updateAll()
   updateRegisters()
   @screen.update(@emulator.memory)
 
@@ -197,8 +189,7 @@ assemble = ->
   padding = $(".navbar").height() + 10
   $(".navbar-spacer").height(padding)
   $("#body").height($(window).height() - padding)
-  extra = if $("#log").css("display") == "none" then 0 else $("#log").outerHeight(true)
-  $(".pane-editor").height($(window).height() - $(".pane-editor").offset().top - extra)
+  $(".pane-editor").height($(window).height() - $(".pane-editor").offset().top - webui.LogPane.height())
   $("#pane-memory").height(32 * 20 + 7)
   # compensate for extra ceremonial baggage chrome puts around a textarea
   $(".code-textarea").outerWidth($(".code-box").width())
@@ -222,18 +213,18 @@ assemble = ->
   # reset the chosen file, so it can be chosen again later.
   $("#load_input")[0].value = ""
   if not file.type.match("text.*")
-    $("#log").empty()
-    @log("Not a text file: " + file.name)
+    webui.LogPane.clear()
+    webui.LogPane.log("Not a text file: " + file.name)
     return
   reader = new FileReader()
   reader.onerror = (e) =>
-    $("#log").empty()
-    @log("Error reading file: " + file.name)
+    webui.LogPane.clear()
+    webui.LogPane.log("Error reading file: " + file.name)
   reader.onload = (e) =>
-    $("#code").empty()
-    $("#code").val(e.target.result)
-    $("#fixme a").text(file.name)
-    codeChanged()
+    view = new webui.CodeView()
+    view.setName(file.name)
+    view.setCode(e.target.result)
+    view.activate()
   reader.readAsText(file)
 
 @runTimer = null
@@ -297,8 +288,7 @@ assemble = ->
   @cpuHeat = 0.0
   @emulator.reset()
   @screen.reset()
-  # keypointer = 0;
-  assemble()
+  setTimeout((=> webui.CodeViewSet.assemble()), 0)
   @updateViews(scroll: true)
 
 Key = carrot16.Key
@@ -367,6 +357,10 @@ $(document).keyup (event) =>
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 
+$(document).ready ->
+  webui.LogPane.init()
+  webui.CodeViewSet.init()
+  
 $(document).ready =>
   @emulator = new carrot16.Emulator()
   @clock = new carrot16.Clock()

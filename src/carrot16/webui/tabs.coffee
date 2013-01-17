@@ -5,37 +5,33 @@ Tabs =
   activePane: null
 
   init: ->
-    @tablist.push $("#tab-memory")
     @connect $("#tab-memory"), $("#pane-memory")
     $("#pane-memory").data "redraw", => webui.MemView.update()
     # FIXME:
-    @tablist.push $("#fixme")
-    @activePane = $(".pane-editor")
-    @activePane.data("tab", $("#fixme"))
-    $("#fixme").data("pane", @activePane)
-    $("#fixme").click => @activate($("#fixme"))
-    # only one tab should be active at first
-    for tab in @tablist
-      tab.removeClass("active")
-      tab.data("pane").css("display", "none")
+    @connect $("#fixme"), $(".pane-editor")
+    # only one tab should be active at first.
     @activate($("#fixme"))
 
   connect: (tab, pane) ->
     tab.click => @activate(tab)
     tab.data("pane", pane)
     pane.data("tab", tab)
+    tab.removeClass("active")
+    pane.css("display", "none")
+    @tablist.push tab
 
   activate: (tab) ->
     if tab.hasClass("active") then return
-    @activePane.data("scroll", @activePane.scrollTop())
-    @activePane.css("display", "none")
-    @activePane.data("tab").removeClass("active")
+    if @activePane?
+      @activePane.data("scroll", @activePane.scrollTop())
+      @activePane.css("display", "none")
+      @activePane.data("tab").removeClass("active")
     # switch!
     @activePane = tab.data("pane")
     @activePane.css("display", "block")
     tab.addClass("active")
     if @activePane.data("scroll")? then @activePane.scrollTop(@activePane.data("scroll"))
-    if @activePane.data("redraw")? then @activePane.data("redraw")()
+    if @activePane.data("redraw")? then setTimeout((=> @activePane.data("redraw")()), 0)
 
   next: ->
     tab = @activePane.data("tab")
