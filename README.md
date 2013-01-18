@@ -29,6 +29,8 @@ open-source licensed under apache 2. patches welcome!
 ## to-do
 
 - load multiple files into the assembler
+- change time slice interval
+- save code
 - save memory image
 - load memory image
 - close assembler tab
