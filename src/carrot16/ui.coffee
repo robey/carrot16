@@ -177,7 +177,10 @@ $(document).keydown (event) =>
     when Key.F6
       step()
       return false
-  if not @runTimer? then return true
+  if not @runTimer?
+    if webui.Tabs.activePane?.data("keydown")?
+      return webui.Tabs.activePane?.data("keydown")(event.which)
+    return true
   @keyboard.keydown(event.which)
 
 $(document).keypress (event) =>
@@ -210,8 +213,8 @@ $(document).keypress (event) =>
 
 $(document).keyup (event) =>
   if @input? then return true
-  if webui.Tabs.activePane?.data("keyhandler")?
-    return webui.Tabs.activePane?.data("keyhandler")(event.which)
+  if webui.Tabs.activePane?.data("keyup")?
+    return webui.Tabs.activePane?.data("keyup")(event.which)
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 

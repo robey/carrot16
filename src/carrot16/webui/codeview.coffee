@@ -1,6 +1,6 @@
 
 class CodeView
-  typingDelay: 250
+  typingDelay: 1000
   typingTimer: null
 
   constructor: ->
@@ -28,6 +28,27 @@ class CodeView
     @dumpDiv = $("##{@name} .code-dump")
     @assembled = null
     @breakpoints = {}
+    Key = carrot16.Key
+    @pane.data "keydown", (key) =>
+      if key == Key.ENTER
+        # many things about javascript and html/css are confounding to me,
+        # but this one is the *most* confounding to me. we want to start the
+        # assembler "as soon as" the user hits enter, so that the editor
+        # seems fairly responsive. but we want chrome to update the UI (the
+        # bits on the screen) so that the user sees the effect of hitting
+        # enter.
+        #
+        # chrome will not update the screen unless we delay by some amount
+        # of time. my testing showed that 0ms is not enough, and chrome will
+        # refuse to update the screen unless we wait at least 10ms, sometimes
+        # even 15ms. i have no idea why. i would love to know! please write
+        # me and tell me why!
+        #
+        # in the meantime, i'm hoping that 50ms is sufficient for chrome to
+        # always be satisfied that it's okay to update the screen, but fast
+        # enough that the user perceives the assembler as starting up
+        # "immediately".
+        setTimeout((=> @codeChanged()), 50)
 
   setName: (name) ->
     $("##{@tabName} a").text(name)
@@ -44,9 +65,10 @@ class CodeView
   visible: -> @pane.css("display") != "none"
 
   codeChanged: ->
+    if @typingTimer? then clearTimeout(@typingTimer)
     @typingTimer = null
     @update()
-    reset()
+    CodeViewSet.assemble()
 
   codeEdited: ->
     if @typingTimer? then clearTimeout(@typingTimer)

@@ -5,7 +5,7 @@ MemView =
   rows: null
 
   init: ->
-    $("#pane-memory").data "keyhandler", (key) =>
+    $("#pane-memory").data "keyup", (key) =>
       view = $("#memory-view")
       top = view.scrollTop()
       Key = carrot16.Key
