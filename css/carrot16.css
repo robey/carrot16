@@ -37,6 +37,10 @@ a {
   cursor: pointer;
 }
 
+.editable {
+  position: relative;
+}
+
 /* ----- navbar ----- */
 
 .navbar-image {
@@ -291,13 +295,16 @@ a {
 .registers {
   margin-top: 1em;
 }
+
 .registers table {
   margin-top: 0.5em;
 }
+
 .registers td {
   margin: 0px;
   padding: 2px;
 }
+
 .registers td.reg_name {
   padding-right: 5px;
   padding-left: 25px;
@@ -305,6 +312,7 @@ a {
   color: gray;
   text-align: right;
 }
+
 .r_sp {
   background-color: #aaaaff;
   text-decoration: none;

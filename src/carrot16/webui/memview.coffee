@@ -141,8 +141,10 @@ MemView =
       cell = $("<span/>")
       cell.attr("id", "addr_#{addrx}")
       @buildCell(cell, addr)
-      cell.bind "click", do (cell, addr) ->
-        -> fetchInput cell, (v) => emulator.memory.set(addr, v)
+      cell.bind "click", do (cell, addr) =>
+        => webui.EditBox.start cell, (v) =>
+          emulator.memory.set(addr, v)
+          @update()
       element.append(cell)
       @addChars(chars, addr)
       if addr % 4 == 3 then element.append($("<span class=memory-dump-spacer />"))
@@ -155,7 +157,7 @@ MemView =
   buildCell: (cell, addr) ->
     value = emulator.memory.peek(addr)
     # blow away all existing classes
-    cell.attr("class", "memory-cell pointer")
+    cell.attr("class", "memory-cell pointer editable")
     cell.html(sprintf("%04x", value))
     if addr == emulator.registers.PC
       cell.addClass("r_pc")

@@ -17,6 +17,7 @@ Tabs =
     @tablist.push tab
 
   activate: (tab) ->
+    webui.EditBox.cancel()
     if tab.hasClass("active") then return
     if @activePane?
       @activePane.data("scroll", @activePane.scrollTop())
