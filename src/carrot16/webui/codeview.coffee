@@ -155,7 +155,8 @@ class CodeView
     $("#line#{n}-#{@name}").css("background-color", "#f88")
 
   assemble: ->
-    @debug "assemble"
+    @debug "start assembly of #{@getName()}"
+    startTime = Date.now()
     logger = (n, pos, message) => @logError(n, message)
     asm = new d16bunny.Assembler(logger)
     @assembled = asm.compile(@getCode())
@@ -168,10 +169,13 @@ class CodeView
     # turn off breakpoints that aren't code anymore.
     for line, isSet of @breakpoints #when isSet
       @setBreakpoint(line, isSet)
+    @debug "finished assembly of #{@getName()} in #{Date.now() - startTime} msec"
     @buildDump()
+    @debug "finished assembly & dump of #{@getName()} in #{Date.now() - startTime} msec"
     true
 
   # build up the dump panel (lines of "offset: words...")
+  # FIXME: profiling reveals that this takes way longer than actually assembling. :(
   buildDump: ->
     @addrDiv.empty()
     @dumpDiv.empty()

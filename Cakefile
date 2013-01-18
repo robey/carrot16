@@ -50,7 +50,8 @@ webFiles = [
   "registers",
   "codeview",
   "memview",
-  "logpane"
+  "logpane",
+  "editbox"
 ]
 
 compileForWeb = (packageName, sourceFolder, sourceFiles, destFolder, destFile) ->
