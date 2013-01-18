@@ -754,15 +754,28 @@ var exports = {};
     };
 
     Assembler.prototype.compile = function(lines, org, maxErrors) {
-      var defaultValue, errorCount, giveUp, i, info, infos, j, line, process, _i, _j, _k, _ref, _ref1, _ref2,
-        _this = this;
       if (org == null) {
         org = 0;
       }
       if (maxErrors == null) {
         maxErrors = 10;
       }
-      infos = [];
+      this.infos = [];
+      return this.continueCompile(lines, org, maxErrors);
+    };
+
+    Assembler.prototype.continueCompile = function(lines, org, maxErrors) {
+      var defaultValue, errorCount, giveUp, i, info, j, line, process, _i, _j, _k, _ref, _ref1, _ref2,
+        _this = this;
+      if (org == null) {
+        org = null;
+      }
+      if (maxErrors == null) {
+        maxErrors = 10;
+      }
+      if (!(org != null)) {
+        org = this.lastOrg;
+      }
       errorCount = 0;
       giveUp = false;
       defaultValue = {
@@ -798,11 +811,11 @@ var exports = {};
         info = process(i, function() {
           return _this.compileLine(line, org);
         });
-        infos.push(info);
+        this.infos.push(info);
         org = info.org + info.data.length;
       }
       for (i = _j = 0, _ref1 = lines.length; 0 <= _ref1 ? _j < _ref1 : _j > _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-        info = infos[i];
+        info = this.infos[i];
         process(i, function() {
           return _this.resolveLine(info);
         });
@@ -812,7 +825,8 @@ var exports = {};
           }
         }
       }
-      return new AssemblerOutput(errorCount, infos, this.symtab);
+      this.lastOrg = org;
+      return new AssemblerOutput(errorCount, this.infos, this.symtab);
     };
 
     return Assembler;

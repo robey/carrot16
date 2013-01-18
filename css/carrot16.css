@@ -2,15 +2,17 @@ html {
   height: 100%;
   overflow-y: hidden;
 }
+
 body {
   padding-left: 1em;
   padding-right: 1em;
   height: 100%;
-  overflow-y: hidden;
 }
+
 a {
   text-decoration: none !important;
 }
+
 .mono {
   font-family: monospace;
   font-size: 14px;
@@ -23,71 +25,60 @@ a {
 }
 
 .main {
-  overflow-y: no-display;
+  overflow-x: hidden;
+}
+
+/* in order to make the left panel scroll, all enclosing divs must be 100% height */
+.noscroll {
+  height: 100%;
 }
 
 .pointer {
   cursor: pointer;
 }
 
-#header {
-  padding-top: 0.5em;
-  padding-bottom: 1.5em;
-}
-.header_image {
-  height: 48px;
+/* ----- navbar ----- */
+
+.navbar-image {
+  position: absolute;
+  top: 0.25em;
+  height: 1.3em;
+  left: 1em;
 }
 
-.tabs {
-  margin-left: 0.25em !important;
-  padding: 0px 10px;
-  top: 4em;
-}
-.tab_spacer {
-  width: 4em !important;
-}
-.tab {
-  font-size: 12pt;
-  padding: 2px 7px;
-  border-radius: 0.5em 0.5em 0px 0px;
-  margin: 0px 2px;
-  min-height: 0px;  /* override bootstrap */
-}
-.tab_active {
-  background-color: #8AE;
-  color: white !important;
-  text-decoration: none;
-}
-.tab_inactive {
-  background-color: #eee;
-  color: #57C !important;
+.brand {
+  margin-left: 1.1em !important;
 }
 
-/* in order to make the left panel scroll, all enclosing divs must be 100% height */
-.noscroll {
-  height: 100%;
-  overflow-y: no-display;
+.navbar-spacer {
+  height: 0px;
+}
+
+#code-tab-prototype {
+  display: none;
+}
+
+#codeview-prototype {
+  display: none;
 }
 
 /* ----- left panel ----- */
 
 #left_panel {
-  position: relative;
-  float: left;
+  overflow-x: hidden;
+  padding-right: 1em;
 }
 
-.tab_content {
+.pane {
   height: 100%;
-  overflow-y: scroll;
-  position: relative; /* so highlight line will work */  
-}
-#tab1_content {
-  display: none;
-}
-#tab2_content {
-  display: none;
-  overflow-y: scroll;
   position: relative;
+}
+
+/* ----- editor ----- */
+
+.pane-editor {
+  position: relative; /* so highlight line will work */  
+  overflow-y: scroll;
 }
 
 .linenums {
@@ -114,10 +105,12 @@ a {
   padding-bottom: 1px;
   padding-right: 5px;
 }
-.addr {
+
+.code-addr {
   margin-left: 0px !important;
 }
-.dump {
+
+.code-dump {
   margin-left: 1.0em !important;
   padding-top: 6px;
   white-space: nowrap;
@@ -125,8 +118,7 @@ a {
   overflow-x: hidden;
 }
 
-#line_highlight {
-  background-color: #afa;
+.code-highlight-line {
   position: absolute;
   left: 0;
   top: 6px;
@@ -135,37 +127,90 @@ a {
   z-index: -1000;
 }
 
-.editor_div {
+.code-pc-line {
+  background-color: #afa;
+}
+
+.code-box {
   margin-left: 0.5em !important;
 }
-.editor {
+
+.code-textarea {
   color: black;
   width: 100%;
   min-height: 20em;
   background-color: transparent;
 }
 
-#memory_view {
+/* ----- memory view ----- */
+
+#memory-scroller {
+  overflow: scroll;
+}
+
+#memory-view {
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+#memory-addr {
   position: relative;
   top: 0px;
-  left: 0px;
-  height: 8807px;
-}
-#memory_lines {
-  position: relative;
-  top: 0px;
-}
-#memory_dump {
-  position: relative;
-  top: 0px;
-  left: 0px;
-  border: solid 2px #ccc;
-  border-radius: 2px;
-  padding-top: 3px;
-  padding-left: 0.5em;
-}
-.memory_cell {
+  float: left;
+
+  margin-top: 3px;
   padding: 2px;
+  padding-right: 0.7em;
+
+  text-align: right;
+  color: white;
+}
+
+#memory-addr-background {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+
+  margin-top: 3px;
+  background-color: #444;
+  border-radius: 0.7em 0px 0px 0.7em;
+  z-index: -1000;
+}
+
+#memory-dump {
+  position: relative;
+  overflow-x: hidden;
+  top: 0px;
+  left: 0px;
+
+  margin-top: 3px;
+  margin-left: 0px;
+
+  padding: 2px;
+  padding-left: 0.4em;
+}
+
+#memory-dump-background {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+
+  margin-top: 3px;
+  margin-left: 0px;
+  background-color: #eee;
+  border-radius: 0px 0.7em 0.7em 0px;
+  z-index: -1000;
+}
+
+.memory-cell {
+  padding: 2px;
+  margin-left: 0.2em;
+  margin-right: 0.2em;
+}
+
+.memory-dump-spacer {
+  padding-left: 0.75em;
 }
 
 /* ----- right panel ----- */
@@ -180,17 +225,21 @@ a {
 .screen_frame {
   /* exactly 10px bigger than the screen on each side */
   width: 404px;
+  height: 308px;
 }
+
 #screen {
   background-color: black;
   padding: 10px;
 }
+
 #loading_overlay {
   position: absolute;
   top: 0px;
   left: 0px;
   margin: 10px;
 }
+
 #static_overlay {
   position: absolute;
   top: 0px;
@@ -198,6 +247,7 @@ a {
   margin: 10px;
   display: none;  
 }
+
 .notice {
   marginx: 6px 0px 10px 0px;
   color: gray;
@@ -207,6 +257,7 @@ a {
 .buttons {
   margin-top: 1em;
 }
+
 .buttons button {
   font-size: 14px;
   font-weight: bold;
@@ -267,12 +318,11 @@ a {
   text-decoration: none;
 }
 .memory_read {
-  color: #f00;
+  color: #00d;
   text-decoration: none;
 }
 .memory_write {
-  background-color: #000;
-  color: #fcc;
+  color: #e00;
   text-decoration: none;
 }
 .registers td.cycles {

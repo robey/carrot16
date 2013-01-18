@@ -3,88 +3,41 @@
   <head>
     <title>carrot16</title>
     <script type="text/javascript" src="js/lib/jquery-1.8.3.js"></script>
+    <script type="text/javascript" src="js/lib/sprintf-0.7-beta1.js"></script>
     <script type="text/javascript" src="js/lib/d16asm.js"></script>
     <script type="text/javascript" src="js/built/emulator.js"></script>
     <script type="text/javascript" src="js/built/ui.js"></script>
-    <link rel="stylesheet" href="css/bootstrap-2.2.2.css">
-    <link rel="stylesheet" href="css/carrot16.css">
+    <script type="text/javascript" src="js/built/webui.js"></script>
+    <link rel="stylesheet" href="css/bootstrap-2.2.2.css" />
+    <link rel="stylesheet" href="css/carrot16.css" />
+    <link rel="shortcut icon" type="image/png" href="./images/carrot.png" />
   </head>
   <body>
-    <div id="header">
-      <img src="images/carrot16.jpg" class="header_image">
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <ul class="nav">
+          <li>
+            <a class="brand" href="#">
+              <img src="images/carrot.png" class="navbar-image"></img>
+              carrot16
+            </a>
+          </li>
+          <li class="divider-vertical"></li>
+          <li id="tab-memory" class="tab">
+            <a href="#">Memory</a>
+          </li>
+          <li id="code-tab-prototype">
+            <a href="#">(untitled)</a>
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <div class="row-fluid main noscroll" id="body">
-      <div class="span8 noscroll" id="left_panel">
-        <div class="row-fluid" id="tab_row">
-          <div class="span1 tab_spacer"></div>
-          <div class="span7 tabs">
-            <a onclick="toggleTab(0)" class="tab pointer tab_active" id="tab0">Assembler</a>
-            <a onclick="toggleTab(1)" class="tab pointer tab_inactive" id="tab1">Memory Dump</a>
-          </div>
-          <div class="span4"></div>
-        </div>
-        <div class="row-fluid tab_content" id="tab0_content">
-          <div class="span1 mono pointer linenums">
-            <div>
-              <span id="line_highlight"></span>
-            </div>
-            <div id="linenums">
-              <span class="linenum" id="ln1">1</span>
-              <span class="linenum breakpoint" id="ln2">2</span>
-              <span class="linenum" id="ln3">3</span>
-            </div>
-          </div>
-          <div class="span7 editor_div" id="codebox">
-            <textarea class="mono editor" id="code" oninput="codeEdited()" onchange="codeChanged()" wrap=off spellcheck="false">
-set a, 0
-set b, 0x80
-hwi 1
-set a, 3
-set b, 1
-hwi 1
-set a, 5
-set b, 0x200
-hwi 1
-set [0x200], 0x666
-set a, 2
-set b, 0x200
-hwi 1
-:go
-set [0x80], 0xe068
-set [0x81], 0xc069
-set [0x82], 0x8007
-set [0x83], [0x80]
-set [0xa0], 0xe0d2
-set [0xa1], 0xe0cf
-set [0xa2], 0xe0c2
-set [0xa3], 0xe0c5
-set [0xa4], 0xe0d9
-jmp go
-SUB PC, 1
-</textarea>
-          </div>
-          <div class="span1 mono linenums addr" id="offsets">
-          </div>
-          <div class="span3 mono dump" id="dump">
-          </div>
-        </div>
-        <div class="row-fluid tab_content" id="tab1_content" onscroll="updateMemoryView()">
-          <div id="memory_view">
-            <div class="span1 mono linenums" id="memory_lines">
-            </div>
-            <div class="span7 mono editor_div" id="memory_dump">
-            </div>
-            <div class="span1 mono linenums addr" id="memory_unused">
-            </div>
-            <div class="span3 mono dump" id="memory_code">
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="navbar-spacer"></div>
 
+    <div class="row-fluid main noscroll" id="body">
       <!-- panel with monitor and debugging -->
-      <div class="sqpan4" id="right_panel">
+      <div id="right_panel">
         <div class="screen_frame">
           <canvas id="screen" width="384" height="288"></canvas>
           <img id="loading_overlay" src="images/nya-elek.png" width="384" height="288" />
@@ -145,7 +98,65 @@ SUB PC, 1
           </table>
         </div>
       </div>
+
+      <!-- panel with active tab -->
+      <div class="noscroll" id="left_panel">
+
+        <!-- prototype editor pane -->
+        <div class="row-fluid pane pane-editor" id="codeview-prototype">
+          <div class="span1 mono pointer linenums">
+            <div>
+              <span class="code-highlight-line code-pc-line"></span>
+            </div>
+            <div class="code-linenums"></div>
+          </div>
+          <div class="span7 code-box">
+            <textarea class="mono code-textarea" wrap=off spellcheck="false">
+set a, 0
+set b, 0x80
+hwi 1
+set a, 3
+set b, 1
+hwi 1
+set a, 5
+set b, 0x200
+hwi 1
+set [0x200], 0x666
+set a, 2
+set b, 0x200
+hwi 1
+:go
+set [0x80], 0xe068
+set [0x81], 0xc069
+set [0x82], 0x8007
+set [0x83], [0x80]
+set [0xa0], 0xe0d2
+set [0xa1], 0xe0cf
+set [0xa2], 0xe0c2
+set [0xa3], 0xe0c5
+set [0xa4], 0xe0d9
+jmp go
+SUB PC, 1
+</textarea>
+          </div>
+          <div class="span1 mono linenums code-addr"></div>
+          <div class="span3 mono code-dump"></div>
+        </div>
+
+        <!-- memory view pane -->
+        <div class="pane noscroll" id="pane-memory">
+          <div id="memory-addr-background"></div>
+          <div id="memory-dump-background"></div>
+          <div id="memory-view" class="noscroll" onscroll="webui.MemView.update()">
+            <div id="memory-scroller">
+              <div class="mono" id="memory-addr"></div>
+              <div class="mono" id="memory-dump"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
     <div class="row-fluid log_frame" id="log_frame">
       <div class="span12" id="log">
       </div>

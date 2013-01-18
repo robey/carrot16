@@ -47,7 +47,6 @@ class Emulator
   # the dcpu spec actually allows binary ops like "ADD PUSH, POP" where PUSH is both a source and a destination, so the
   # community has agreed that we should just treat it as a read-only [SP - 1].
   getPush: ->
-#    @registers.SP = (@registers.SP - 1) & 0xffff
     @memory.get(@registers.SP - 1)
 
   # [--SP]
@@ -76,7 +75,6 @@ class Emulator
     b = (instruction >> 5) & 0x1f
 
     # FIXME: BRK
-    # FIXME: track memory & registers that were read or written.
 
     if op == 0
       @stepSpecial(b, a)
@@ -141,6 +139,9 @@ class Emulator
         n = @fetchOperand(a)
         @cycles += 4
         @cycles += if n < @hardware.length then @hardware[n].request(this) else 0
+      else
+        # at least spend one cycle pouting.
+        @cycles += 1
 
   stepBinary: (op, a, b) ->
     av = @fetchOperand(a)
