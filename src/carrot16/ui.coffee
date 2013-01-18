@@ -208,6 +208,18 @@ $(document).keypress (event) =>
     when 18 # ^R
       $("#button_run").click()
       return false
+    when 19 # ^S
+      window.URL = window.webkitURL or window.URL
+      if webui.Tabs.activePane?.data("codeview")?
+        codeview = webui.Tabs.activePane.data("codeview")
+        a = $("<a/>")
+        a.attr("download", codeview.getName())
+        a.attr("href", window.URL.createObjectURL(codeview.save()))
+        a.css("display", "hidden")
+        $("#body").append(a)
+        a[0].click()
+        a.remove()
+        return false
   if not @runTimer? then return true
   @keyboard.keypress(event.which)
 

@@ -53,12 +53,17 @@ class CodeView
   setName: (name) ->
     $("##{@tabName} a").text(name)
 
+  getName: -> $("##{@tabName} a").text()
+
   setCode: (text) ->
     @textarea.empty()
     @textarea.val(text)
     @codeChanged()
 
   getCode: -> @textarea.val().split("\n")
+
+  save: ->
+    new window.Blob([ @textarea.val() ], type: "text/plain")
 
   activate: -> webui.Tabs.activate(@tab)
 
