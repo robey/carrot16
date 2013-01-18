@@ -105,6 +105,11 @@ MemView =
     for addr in @range(offset)
       addrx = sprintf("%04x", addr)
       @buildCell($("#addr_#{addrx}"), addr)
+    for addrRow in @range(offset) by @columns
+      chars = $("#chars_#{sprintf("%04x", addrRow)}")
+      chars.empty()
+      for addr in [addrRow ... addrRow + @columns]
+        @addChars(chars, addr)
 
   rebuild: (offset, addr, dump) ->
     addr.empty()
@@ -129,6 +134,8 @@ MemView =
     $("#memory-view").css("height", $("#memory-dump").outerHeight() + 4)
 
   buildRow: (addrRow, element) ->
+    chars = $("<span/>")
+    chars.attr("id", "chars_#{sprintf("%04x", addrRow)}")
     for addr in [addrRow ... addrRow + @columns]
       addrx = sprintf("%04x", addr)
       cell = $("<span/>")
@@ -137,7 +144,10 @@ MemView =
       cell.bind "click", do (cell, addr) ->
         -> fetchInput cell, (v) => emulator.memory.set(addr, v)
       element.append(cell)
+      @addChars(chars, addr)
       if addr % 4 == 3 then element.append($("<span class=memory-dump-spacer />"))
+    element.append($("<span class=memory-dump-spacer />"))
+    element.append(chars)
     element
 
   range: (offset) -> [offset ... Math.min(0x10000, offset + @columns * @rows)]
@@ -157,6 +167,14 @@ MemView =
       cell.addClass("memory_write")
     else if addr in memoryReads
       cell.addClass("memory_read")
+
+  addChars: (chars, addr) ->
+    value = emulator.memory.peek(addr)
+    for v in [ (value >> 8) & 0xff, value & 0xff ]
+      if v > 0x20 and v < 0x7f
+        chars.append(String.fromCharCode(v))
+      else
+        chars.append(".")
 
   debug: (message) ->
     console.log "[memview] #{message}"
