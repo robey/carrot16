@@ -48,8 +48,8 @@
 
 @updateViews = (options) ->
   # FIXME: if @emulator.onFire then: show cool fire image.
+  webui.CodeViewSet.updatePcHighlight()
   webui.MemView.update()
-  webui.CodeViewSet.updateAll()
   webui.Registers.update()
   @screen.update(@emulator.memory)
 
@@ -110,7 +110,7 @@
     if @emulator.onFire
       @stopRun()
       return
-    if @breakpoints[@assembled.memToLine(@emulator.registers.PC)]
+    if webui.CodeViewSet.atBreakpoint()
       @stopRun()
       return
     if @emulator.cycles >= @lastCycles + @CYCLES_PER_SLICE

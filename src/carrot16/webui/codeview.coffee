@@ -109,6 +109,9 @@ class CodeView
   toggleBreakpoint: (linenum) ->
     @setBreakpoint(linenum, not @breakpoints[linenum])
 
+  atBreakpoint: ->
+    @breakpoints[@assembled.memToLine(emulator.registers.PC)]
+
   logError: (n, message) ->
     linenum = $("<span />")
     linenum.addClass("line")
@@ -160,6 +163,7 @@ class CodeView
   debug: (message) ->
     console.log "[#{@name}] #{message}"
 
+
 CodeViewSet =
   id: 1
   views: []
@@ -175,9 +179,8 @@ CodeViewSet =
   resizeAll: ->
     for v in @views then v.resize()
 
-  updateAll: ->
+  updatePcHighlight: ->
     for v in @views
-      v.update()
       v.updatePcHighlight(true)
 
   assemble: ->
@@ -190,6 +193,10 @@ CodeViewSet =
         view.activate()
         return false
     true
+
+  atBreakpoint: ->
+    for v in @views then if v.atBreakpoint() then return true
+    false
 
 
 exports.CodeView = CodeView
