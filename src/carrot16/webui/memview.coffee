@@ -2,13 +2,34 @@
 MemView = 
   offset: null
   columns: null
-  rows: 32
+  rows: null
+
+  init: ->
+    $("#pane-memory").data "keyhandler", (key) =>
+      view = $("#memory-view")
+      top = view.scrollTop()
+      Key = carrot16.Key
+      switch key
+        when Key.UP
+          view.scrollTop(Math.max(top - 1, 0))
+          false
+        when Key.DOWN
+          view.scrollTop(top + 1)
+          false
+        when Key.PAGE_UP
+          view.scrollTop(Math.max(top - @rows, 0))
+          false
+        when Key.PAGE_DOWN
+          view.scrollTop(top + @rows)
+          false
+        else
+          true
 
   scrollTo: (addr) ->
     webui.Tabs.activate $("#tab-memory")
     @checkWidth()
     page = @rows * @columns
-    $("#pane-memory").scrollTop(Math.floor(addr / page) * @rows)
+    $("#memory-view").scrollTop(Math.floor(addr / page) * @rows)
     @update()
 
   visible: ->
