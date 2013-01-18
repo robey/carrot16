@@ -27,8 +27,8 @@ Registers =
     $("#regEX").click(=> @fetchInput $("#regEX"), (v) => emulator.registers.EX = v)
 
   goToPC: ->
-    if webui.Tabs.activePane?.hasClass("pane-editor")
-      webui.Tabs.activePane.data("codeview").updatePcHighlight(true)
+    if webui.CodeViewSet.visible()
+      webui.CodeViewSet.updatePcHighlight(true)
     else
       webui.MemView.scrollTo(emulator.registers.PC)
 

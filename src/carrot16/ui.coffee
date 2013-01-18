@@ -48,7 +48,8 @@
 
 @updateViews = (options) ->
   # FIXME: if @emulator.onFire then: show cool fire image.
-  webui.CodeViewSet.updatePcHighlight(options?.scroll)
+  if webui.CodeViewSet.visible()
+    webui.CodeViewSet.updatePcHighlight(options?.scroll)
   webui.MemView.update()
   webui.Registers.update()
   @screen.update(@emulator.memory)
@@ -210,7 +211,7 @@ $(document).keypress (event) =>
       return false
     when 19 # ^S
       window.URL = window.webkitURL or window.URL
-      if webui.Tabs.activePane?.data("codeview")?
+      if webui.CodeViewSet.visible()
         codeview = webui.Tabs.activePane.data("codeview")
         a = $("<a/>")
         a.attr("download", codeview.getName())

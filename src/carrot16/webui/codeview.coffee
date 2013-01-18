@@ -198,6 +198,9 @@ CodeViewSet =
   id: 1
   views: []
 
+  visible: ->
+    webui.Tabs.activePane?.data("codeview")?
+    
   init: ->
     $("#master-codeview").css("display", "none")
 
