@@ -2,13 +2,34 @@
 MemView = 
   offset: null
   columns: null
-  windowRows: 32
+  rows: null
+
+  init: ->
+    $("#pane-memory").data "keyhandler", (key) =>
+      view = $("#memory-view")
+      top = view.scrollTop()
+      Key = carrot16.Key
+      switch key
+        when Key.UP
+          view.scrollTop(Math.max(top - 1, 0))
+          false
+        when Key.DOWN
+          view.scrollTop(top + 1)
+          false
+        when Key.PAGE_UP
+          view.scrollTop(Math.max(top - @rows, 0))
+          false
+        when Key.PAGE_DOWN
+          view.scrollTop(top + @rows)
+          false
+        else
+          true
 
   scrollTo: (addr) ->
     webui.Tabs.activate $("#tab-memory")
     @checkWidth()
-    page = @windowRows * @columns
-    $("#pane-memory").scrollTop(Math.floor(addr / page) * @windowRows)
+    page = @rows * @columns
+    $("#memory-view").scrollTop(Math.floor(addr / page) * @rows)
     @update()
 
   visible: ->
@@ -21,73 +42,115 @@ MemView =
   update: ->
     if not @visible() then return
     @checkWidth()
-    offset = $("#pane-memory").scrollTop() * @columns
-    lines = $("#memory_linenums")
-    dump = $("#memory_dump")
-    lines.css("top", offset / @columns)
+    offset = $("#memory-view").scrollTop() * @columns
+    addr = $("#memory-addr")
+    dump = $("#memory-dump")
+    addr.css("top", offset / @columns)
     dump.css("top", offset / @columns)
     if @offset == offset
       # update the cell contents only, don't rebuild.
       @refresh(offset)
     else
-      @rebuild(offset, lines, dump)
+      @rebuild(offset, addr, dump)
 
   # ensure that we've cached the width
   checkWidth: ->
     if @columns? then return
-    @determineWidth()
-    rows = 0x10000 / @columns
+    @calculateSize()
+    totalRows = 0x10000 / @columns
     lineHeight = 20
-    $("#memory_view").height(rows + (@windowRows - 1) * lineHeight - 5)
+    $("#memory-scroller").height(totalRows - (@rows - 1) + (@rows * lineHeight) + 7)
+    setTimeout((=> @update()), 0)
 
   # figure out if we can fit 16 words wide (and do so)
-  determineWidth: ->
-    @debug "determine width"
-    dump = $("#memory_dump")
-    dump.css("width", "100%")
+  calculateSize: ->
+    pane = $("#pane-memory")
+    addr = $("#memory-addr")
+    dump = $("#memory-dump")
+    lineHeight = parseInt(dump.css("line-height"))
+    @debug "pane width=#{pane.width()} height=#{pane.height()} line=#{lineHeight}"
+
+    # set the width of the address panel to fit exactly.
+    addr.empty()
+    addr.css("width", 0)
+    span = $("<span>0000</span>")
+    addr.append(span)
+    addr.css("width", span.width() + addr.outerWidth())
+
+    dump.css("width", "0")
     dump.empty()
-    for cols in [ 16, 8 ]
-      line = $("<span/>")
-      for i in [0 ... cols]
-        span = $("<span/>")
-        span.addClass("memory-cell")
-        span.text("0000")
-        line.append(span)
-      dump.append(line)
-      if line.width() + 50 < dump.width()
-        # found one that fits!
-        @columns = cols
-        dump.width(line.width() + 10)
-        @debug "going with width of #{@columns}"
-        return
-    @columns = 8
+    outerWidth = dump.outerWidth()
+
+    # fit as many rows and columns (up to 32 each, using only powers of 2) as we can in the available space.
+    @rows = 32
+    loop
+      height = lineHeight * (@rows + 1)
+      break if height < pane.height()
+      @rows /= 2
+
+    @columns = 32
+    loop
+      dump.css("width", "100%")
+      dump.empty()
+      row = @buildRow(0, $("<span/>"))
+      dump.append(row)
+      if row.width() + 10 < pane.width() and row.height() <= lineHeight
+        $("#memory-dump").css("width", row.width() + outerWidth)
+        break
+      @columns /= 2
+
+    @debug "going with memory view of #{@columns} x #{@rows}"
 
   refresh: (offset) ->
     for addr in @range(offset)
       addrx = sprintf("%04x", addr)
       @buildCell($("#addr_#{addrx}"), addr)
+    for addrRow in @range(offset) by @columns
+      chars = $("#chars_#{sprintf("%04x", addrRow)}")
+      chars.empty()
+      for addr in [addrRow ... addrRow + @columns]
+        @addChars(chars, addr)
 
-  rebuild: (offset, lines, dump) ->
-    lines.empty()
+  rebuild: (offset, addr, dump) ->
+    addr.empty()
     dump.empty()
     for addrRow in @range(offset) by @columns
-      addrx = sprintf("%04x", addrRow)
-      lines.append("#{addrx}<br/>")
+      addr.append("#{sprintf("%04x", addrRow)}<br/>")
       row = $("<div/>")
       row.addClass("memory-dump-line")
-      for addr in [addrRow ... addrRow + @columns]
-        addrx = sprintf("%04x", addr)
-        cell = $("<span/>")
-        cell.attr("id", "addr_#{addrx}")
-        @buildCell(cell, addr)
-        cell.bind "click", do (cell, addr) ->
-          -> fetchInput cell, (v) => emulator.memory.set(addr, v)
-        row.append(cell)
-        #if addr % 8 == 7 then dump.append($("<br/>"))
-      dump.append(row)
+      dump.append(@buildRow(addrRow, row))
     @offset = offset
 
-  range: (offset) -> [offset ... Math.min(0x10000, offset + @columns * @windowRows)]
+    # make the background roundrect match the internals.
+    $("#memory-addr-background").css("width", $("#memory-addr").outerWidth())
+    $("#memory-addr-background").css("height", $("#memory-addr").outerHeight())
+    $("#memory-dump-background").css("width", $("#memory-dump").outerWidth() + 20)
+    $("#memory-dump-background").css("height", $("#memory-dump").outerHeight())
+    $("#memory-dump-background").css("left", $("#memory-dump").position().left)
+    # the various scroll containers should be the same size as their contents.
+    width = $("#memory-addr").outerWidth() + $("#memory-dump").outerWidth() + 10
+    $("#memory-scroller").css("width", width)
+    $("#memory-view").css("width", width)
+    $("#memory-view").css("height", $("#memory-dump").outerHeight() + 4)
+
+  buildRow: (addrRow, element) ->
+    chars = $("<span/>")
+    chars.attr("id", "chars_#{sprintf("%04x", addrRow)}")
+    for addr in [addrRow ... addrRow + @columns]
+      addrx = sprintf("%04x", addr)
+      cell = $("<span/>")
+      cell.attr("id", "addr_#{addrx}")
+      @buildCell(cell, addr)
+      cell.bind "click", do (cell, addr) ->
+        -> fetchInput cell, (v) => emulator.memory.set(addr, v)
+      element.append(cell)
+      @addChars(chars, addr)
+      if addr % 4 == 3 then element.append($("<span class=memory-dump-spacer />"))
+    element.append($("<span class=memory-dump-spacer />"))
+    element.append(chars)
+    element
+
+  range: (offset) -> [offset ... Math.min(0x10000, offset + @columns * @rows)]
 
   buildCell: (cell, addr) ->
     value = emulator.memory.peek(addr)
@@ -104,6 +167,14 @@ MemView =
       cell.addClass("memory_write")
     else if addr in memoryReads
       cell.addClass("memory_read")
+
+  addChars: (chars, addr) ->
+    value = emulator.memory.peek(addr)
+    for v in [ (value >> 8) & 0xff, value & 0xff ]
+      if v > 0x20 and v < 0x7f
+        chars.append(String.fromCharCode(v))
+      else
+        chars.append(".")
 
   debug: (message) ->
     console.log "[memview] #{message}"

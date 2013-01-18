@@ -210,6 +210,8 @@ $(document).keypress (event) =>
 
 $(document).keyup (event) =>
   if @input? then return true
+  if webui.Tabs.activePane?.data("keyhandler")?
+    return webui.Tabs.activePane?.data("keyhandler")(event.which)
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 
@@ -233,6 +235,7 @@ $(document).ready =>
 
   webui.Registers.init()
   webui.Tabs.init()
+  webui.MemView.init()
 
   reset()
   $(window).resize (event) -> resized()
