@@ -139,6 +139,9 @@ class Emulator
         n = @fetchOperand(a)
         @cycles += 4
         @cycles += if n < @hardware.length then @hardware[n].request(this) else 0
+      else
+        # at least spend one cycle pouting.
+        @cycles += 1
 
   stepBinary: (op, a, b) ->
     av = @fetchOperand(a)
