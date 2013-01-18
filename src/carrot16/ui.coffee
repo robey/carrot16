@@ -48,7 +48,7 @@
 
 @updateViews = (options) ->
   # FIXME: if @emulator.onFire then: show cool fire image.
-  webui.CodeViewSet.updatePcHighlight()
+  webui.CodeViewSet.updatePcHighlight(options?.scroll)
   webui.MemView.update()
   webui.Registers.update()
   @screen.update(@emulator.memory)

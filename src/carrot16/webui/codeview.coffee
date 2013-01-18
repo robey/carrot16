@@ -105,7 +105,9 @@ class CodeView
     if n?
       @pcline.css("top", (n * @pcline.height()) + 5)
       @pcline.css("display", "block")
-      if alsoScroll then @scrollToLine(n)
+      if alsoScroll
+        if not @visible() then @activate()
+        @scrollToLine(n)
     else
       @pcline.css("display", "none")
 
@@ -207,9 +209,9 @@ CodeViewSet =
   resizeAll: ->
     for v in @views then v.resize()
 
-  updatePcHighlight: ->
+  updatePcHighlight: (scroll) ->
     for v in @views
-      v.updatePcHighlight(true)
+      v.updatePcHighlight(scroll)
 
   assemble: ->
     webui.LogPane.clear()
