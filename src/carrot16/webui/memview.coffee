@@ -21,7 +21,7 @@ MemView =
   update: ->
     if not @visible() then return
     @checkWidth()
-    offset = $("#pane-memory").scrollTop() * @columns
+    offset = $("#memory-view").scrollTop() * @columns
     addr = $("#memory-addr")
     dump = $("#memory-dump")
     addr.css("top", offset / @columns)
@@ -36,9 +36,10 @@ MemView =
   checkWidth: ->
     if @columns? then return
     @calculateSize()
-    rows = 0x10000 / @columns
+    totalRows = 0x10000 / @columns
     lineHeight = 20
-    $("#memory-view").height(rows + (@rows - 1) * lineHeight - 5)
+    $("#memory-scroller").height(totalRows - (@rows - 1) + (@rows * lineHeight) + 7)
+    setTimeout((=> @update()), 0)
 
   # figure out if we can fit 16 words wide (and do so)
   calculateSize: ->
@@ -72,7 +73,7 @@ MemView =
       dump.empty()
       row = @buildRow(0, $("<span/>"))
       dump.append(row)
-      if row.width() + 10 < pane.width()
+      if row.width() + 10 < pane.width() and row.height() <= lineHeight
         $("#memory-dump").css("width", row.width() + outerWidth)
         break
       @columns /= 2
@@ -93,11 +94,18 @@ MemView =
       row.addClass("memory-dump-line")
       dump.append(@buildRow(addrRow, row))
     @offset = offset
+
+    # make the background roundrect match the internals.
     $("#memory-addr-background").css("width", $("#memory-addr").outerWidth())
     $("#memory-addr-background").css("height", $("#memory-addr").outerHeight())
-    $("#memory-dump-background").css("width", $("#memory-dump").outerWidth())
+    $("#memory-dump-background").css("width", $("#memory-dump").outerWidth() + 20)
     $("#memory-dump-background").css("height", $("#memory-dump").outerHeight())
     $("#memory-dump-background").css("left", $("#memory-dump").position().left)
+    # the various scroll containers should be the same size as their contents.
+    width = $("#memory-addr").outerWidth() + $("#memory-dump").outerWidth() + 10
+    $("#memory-scroller").css("width", width)
+    $("#memory-view").css("width", width)
+    $("#memory-view").css("height", $("#memory-dump").outerHeight() + 4)
 
   buildRow: (addrRow, element) ->
     for addr in [addrRow ... addrRow + @columns]

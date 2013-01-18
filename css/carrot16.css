@@ -26,13 +26,11 @@ a {
 
 .main {
   overflow-x: hidden;
-  overflow-y: no-display;
 }
 
 /* in order to make the left panel scroll, all enclosing divs must be 100% height */
 .noscroll {
   height: 100%;
-  overflow-y: no-display;
 }
 
 .pointer {
@@ -59,18 +57,21 @@ a {
 /* ----- left panel ----- */
 
 #left_panel {
-  position: relative;
   overflow-x: hidden;
   padding-right: 1em;
 }
 
 .pane {
   height: 100%;
-  overflow-y: scroll;
-  position: relative; /* so highlight line will work */  
+  position: relative;
 }
 
 /* ----- editor ----- */
+
+.pane-editor {
+  position: relative; /* so highlight line will work */  
+  overflow-y: scroll;
+}
 
 .linenums {
   padding-left: 0px;
@@ -135,11 +136,14 @@ a {
 
 /* ----- memory view ----- */
 
+#memory-scroller {
+  overflow: scroll;
+}
+
 #memory-view {
   position: relative;
-  top: 0px;
-  left: 0px;
   overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 #memory-addr {
