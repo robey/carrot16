@@ -144,10 +144,12 @@ SUB PC, 1
         </div>
 
         <!-- memory view pane -->
-        <div class="row-fluid pane" id="pane-memory" onscroll="webui.MemView.update()">
-          <div id="memory_view">
-            <div class="mono" id="memory_linenums"></div>
-            <div class="mono" id="memory_dump"></div>
+        <div class="pane" id="pane-memory" onscroll="webui.MemView.update()">
+          <div id="memory-addr-background"></div>
+          <div id="memory-dump-background"></div>
+          <div id="memory-view">
+            <div class="mono" id="memory-addr"></div>
+            <div class="mono" id="memory-dump"></div>
           </div>
         </div>
       </div>
