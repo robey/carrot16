@@ -10,7 +10,8 @@ class CodeView
     @pane.attr("id", @name)
     @pane.data "redraw", => @update()
     @pane.data "codeview", @
-    @tab = $(".code-tab-prototype").clone()
+    @tab = $("#code-tab-prototype").clone()
+    @tab.css("display", "block")
     @tab.attr("id", @tabName)
     $(".nav").data("robey", @tab)
     $(".nav").append(@tab)

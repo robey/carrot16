@@ -236,6 +236,7 @@ $(document).ready =>
   webui.Registers.init()
   webui.Tabs.init()
   webui.MemView.init()
+  webui.Tabs.openNewEditor()
 
   reset()
   $(window).resize (event) -> resized()

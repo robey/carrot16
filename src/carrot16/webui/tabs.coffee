@@ -7,10 +7,6 @@ Tabs =
   init: ->
     @connect $("#tab-memory"), $("#pane-memory")
     $("#pane-memory").data "redraw", => webui.MemView.update()
-    # FIXME:
-    @connect $("#fixme"), $(".pane-editor")
-    # only one tab should be active at first.
-    @activate($("#fixme"))
 
   connect: (tab, pane) ->
     tab.click => @activate(tab)
@@ -41,5 +37,15 @@ Tabs =
     if n >= @tablist.length then n = 0
     @activate(@tablist[n])
 
+  openNewEditor: ->
+    view = new webui.CodeView()
+    view.setName("(untitled)")
+    view.setCode(DEMO)
+    view.activate()
+
 
 exports.Tabs = Tabs
+
+DEMO = """; demo
+set a, 3
+"""

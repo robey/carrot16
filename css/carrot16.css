@@ -54,6 +54,14 @@ a {
   height: 0px;
 }
 
+#code-tab-prototype {
+  display: none;
+}
+
+#codeview-prototype {
+  display: none;
+}
+
 /* ----- left panel ----- */
 
 #left_panel {
