@@ -8,7 +8,7 @@
 # cpu timings
 @TIME_SLICE_MSEC = 50
 @CLOCK_SPEED_HZ = 100000
-@CYCLES_PER_SLICE = Math.floor(@CLOCK_SPEED_HZ * 1.0 / @TIME_SLICE_MSEC)
+@CYCLES_PER_SLICE = Math.floor(@CLOCK_SPEED_HZ * @TIME_SLICE_MSEC / 1000)
 
 
 # ----- weird keyboard input logic
