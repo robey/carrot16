@@ -19,6 +19,7 @@ Project =
     $("#menu-load").click => @load()
     $("#menu-save").click => @save()
     $("#menu-close").click => @closeTab()
+    $("#menu-rename").click => @rename()
     # thread "load" clicks through to the real file loader. (the web sucks.)
     $("#load_input").bind("change", Project.finishLoading)
 
@@ -62,13 +63,20 @@ Project =
     a[0].click()
     a.remove()
 
+  rename: ->
+    if not webui.CodeViewSet.visible() then return
+    webui.Tabs.activePane.data("codeview").editName()
+
   keypress: (key) ->
     switch event.which
-      when CTRL_L
-        @load()
-        true
       when CTRL_N
         @openNew()
+        true
+      when CTRL_O
+        @load()
+        true
+      when CTRL_R
+        @rename()
         true
       when CTRL_S
         @save()

@@ -55,6 +55,31 @@ class CodeView
 
   getName: -> $("##{@tabName} a").text()
 
+  editName: ->
+    # js makes this kinda ridiculously complex. :(
+    edit = $("<input type=text />")
+    oldName = @getName()
+    edit.val(oldName)
+    edit.css("width", "5em")
+    edit.css("class", "navbar-form")
+    $("##{@tabName} a").empty()
+    edit.submit =>
+      @setName(edit.val())
+      edit.remove()
+    edit.blur =>
+      @setName(oldName)
+      edit.remove()
+    edit.keydown (event) =>
+      if (event.which == 9) or (event.which == 27)
+        edit.blur()
+        return false
+      if event.which == 13
+        edit.submit()
+        return false
+    $("##{@tabName} a").append(edit)
+    edit.focus()
+    edit.select()
+
   setCode: (text) ->
     @textarea.empty()
     @textarea.val(text)

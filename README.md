@@ -28,12 +28,10 @@ open-source licensed under apache 2. patches welcome!
 
 ## to-do
 
-- load multiple files into the assembler
+- name tab
 - change time slice interval
-- save code
 - save memory image
 - load memory image
-- close assembler tab
 - assembler: string form with high bit set on last char
 - add vector display
 - add disk drive

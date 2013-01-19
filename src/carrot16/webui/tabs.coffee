@@ -30,6 +30,9 @@ Tabs =
     if @activePane.data("scroll")? then @activePane.scrollTop(@activePane.data("scroll"))
     if @activePane.data("redraw")? then setTimeout((=> @activePane.data("redraw")()), 0)
 
+  activeTab: ->
+    @activePane?.data("tab")
+    
   next: ->
     tab = @activePane.data("tab")
     n = 0
@@ -55,6 +58,6 @@ Tabs =
     CodeViewSet.remove(pane.data("codeview"))
     pane.remove()
     CodeViewSet.assemble()
-    
+
 
 exports.Tabs = Tabs
