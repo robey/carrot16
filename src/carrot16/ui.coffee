@@ -27,6 +27,7 @@
   $(".navbar-spacer").height(padding)
   $("#body").height($(window).height() - padding)
   webui.MemView.resized()
+  webui.CodeViewSet.resizeAll()
   @updateViews()
 
 # ----- emulator buttons
