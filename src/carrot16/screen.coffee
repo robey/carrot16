@@ -87,6 +87,8 @@ class Screen extends Hardware
     @screen = @screenElement[0].getContext("2d")
     @image = @screen.createImageData(@DISPLAY_WIDTH * @PIXEL_SIZE, @DISPLAY_HEIGHT * @PIXEL_SIZE)
     @screenMapWatch = null
+    @paletteMapWatch = null
+    @fontMapWatch = null
     @screenMapDirty = {}
     @reset()
     setInterval((=> @blink()), 500)
@@ -148,12 +150,24 @@ class Screen extends Hardware
         @invalidate()
         0
       when @MEM_MAP_FONT
+        if @fontMapWatch?
+          emulator.memory.unwatchWrites(@fontMapWatch)
+          @fontMapWatch = null
         @fontMap = emulator.registers.B
         @invalidate()
+        if @fontMap > 0
+          @fontMapWatch = emulator.memory.watchWrites @fontMap, @fontMap + @DEFAULT_FONT.length, (addr) =>
+            @invalidate()
         0
       when @MEM_MAP_PALETTE
+        if @paletteMapWatch?
+          emulator.memory.unwatchWrites(@paletteMapWatch)
+          @paletteMapWatch = null
         @paletteMap = emulator.registers.B
         @invalidate()
+        if @paletteMap > 0
+          @paletteMapWatch = emulator.memory.watchWrites @paletteMap, @paletteMap + @DEFAULT_PALETTE.length, (addr) =>
+            @invalidate()
         0
       when @SET_BORDER_COLOR
         @borderColor = emulator.registers.B & 0xf
