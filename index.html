@@ -71,15 +71,15 @@
           <div class="span4">
             <!-- this is really evil. it's to get around rendering bugs in chrome for "file" inputs -->
             <div id="load_hack">
-              <button onclick="run()" id="button_run">&#8595; Run (^R)</button>
+              <button class="btn btn-success" onclick="run()" id="button_run">&#8595; Run (F2)</button>
               <input type="file" id="load_input" />
             </div>
           </div>
           <div class="span4">
-            <button onclick="step()">&#8618; Step (^N)</button>
+            <button class="btn" onclick="step()">&#8618; Step (F3)</button>
           </div>
           <div class="span4">
-            <button onclick="reset()">&#8634; Reset (^C)</button><br/>
+            <button class="btn" id="button_reset" onclick="reset()">&#8634; Reset (F1)</button><br/>
           </div>
         </div>
 

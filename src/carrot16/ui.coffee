@@ -38,14 +38,14 @@
     return
   @clock.start()
   @runTimer = setInterval((=> @clockTick()), @TIME_SLICE_MSEC)
-  $("#button_run").html("&#215; Stop (^R)")
+  $("#button_run").html("&#215; Stop (F2)")
 
 @stopRun = ->
   @clock.stop()
   clearInterval(@runTimer)
   @runTimer = null
   @lastCycles = null
-  $("#button_run").html("&#8595; Run (^R)")
+  $("#button_run").html("&#8595; Run (F2)")
   @updateViews(scroll: true)
 
 @clockTick = ->
@@ -107,15 +107,12 @@ $(document).keydown (event) =>
       webui.Tabs.next()
       return false
     when Key.F1
-      $("#load_input").click()
-      return false
-    when Key.F4
       reset()
       return false
-    when Key.F5
+    when Key.F2
       $("#button_run").click()
       return false
-    when Key.F6
+    when Key.F3
       step()
       return false
   if not @runTimer?
@@ -126,16 +123,6 @@ $(document).keydown (event) =>
 
 $(document).keypress (event) =>
   if webui.EditBox.keypress(event.which) then return false
-  switch event.which
-    when 3 # ^C
-      reset()
-      return false
-#    when 14 # ^N
-#      step()
-#      return false
-    when 18 # ^R
-      $("#button_run").click()
-      return false
   if @runTimer? then return @keyboard.keypress(event.which)
   if webui.Project.keypress(event.which) then return false
   true

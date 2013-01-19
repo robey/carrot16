@@ -41,12 +41,12 @@ Registers =
     hiColor = [ 255, 0, 0 ]
     # my kingdom for Array.zip
     color = [0...3].map (i) =>
-      Math.floor(lowColor[i] + @cpuHeat * (hiColor[i] - lowColor[i]))
+      Math.floor(lowColor[i] + cpuHeat * (hiColor[i] - lowColor[i]))
     canvas = $("#cpu_heat")[0].getContext("2d")
     canvas.fillStyle = "#fff"
     canvas.fillRect(0, 0, 1, 100)
     canvas.fillStyle = "rgb(#{color[0]},#{color[1]},#{color[2]})"
-    canvas.fillRect(0, Math.floor(100 * (1.0 - @cpuHeat)), 1, 100)
+    canvas.fillRect(0, Math.floor(100 * (1.0 - cpuHeat)), 1, 100)
 
 
 exports.Registers = Registers
