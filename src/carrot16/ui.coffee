@@ -153,40 +153,13 @@ $(document).ready =>
   webui.Registers.init()
   webui.Tabs.init()
   webui.MemView.init()
-  webui.Tabs.openNewEditor().setCode(DEMO)
+  pane = webui.Tabs.openNewEditor()
+  pane.setCode(webui.DEMO_CODE)
+  pane.setName("demo")
 
   reset()
   $(window).resize (event) -> resized()
   resized()
-
-
-DEMO = """; demo
-set a, 0
-set b, 0x80
-hwi 1
-set a, 3
-set b, 1
-hwi 1
-set a, 5
-set b, 0x200
-hwi 1
-set [0x200], 0x666
-set a, 2
-set b, 0x200
-hwi 1
-:go
-set [0x80], 0xe068
-set [0x81], 0xc069
-set [0x82], 0x8007
-set [0x83], [0x80]
-set [0xa0], 0xe0d2
-set [0xa1], 0xe0cf
-set [0xa2], 0xe0c2
-set [0xa3], 0xe0c5
-set [0xa4], 0xe0d9
-jmp go
-SUB PC, 1
-"""
 
 #  window.localStorage.setItem("robey", "hello")
 # window.localStorage.getItem("robey")
