@@ -46,6 +46,7 @@ emulatorFiles = [
 ]
 
 webFiles = [
+  "project",
   "tabs",
   "registers",
   "codeview",

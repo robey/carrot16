@@ -173,7 +173,7 @@ MemView =
   addChars: (chars, addr) ->
     value = emulator.memory.peek(addr)
     for v in [ (value >> 8) & 0xff, value & 0xff ]
-      if v > 0x20 and v < 0x7f
+      if v >= 0x20 and v < 0x7f
         chars.append(String.fromCharCode(v))
       else
         chars.append(".")

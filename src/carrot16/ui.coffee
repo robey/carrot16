@@ -29,28 +29,6 @@
   webui.MemView.resized()
   @updateViews()
 
-@load = ->
-  $("#load_input").click()
-
-@loadReally = (event) ->
-  file = event.target.files[0]
-  # reset the chosen file, so it can be chosen again later.
-  $("#load_input")[0].value = ""
-  if not file.type.match("text.*")
-    webui.LogPane.clear()
-    webui.LogPane.log("Not a text file: " + file.name)
-    return
-  reader = new FileReader()
-  reader.onerror = (e) =>
-    webui.LogPane.clear()
-    webui.LogPane.log("Error reading file: " + file.name)
-  reader.onload = (e) =>
-    view = new webui.CodeView()
-    view.setName(file.name)
-    view.setCode(e.target.result)
-    view.activate()
-  reader.readAsText(file)
-
 # ----- emulator buttons
 
 @runTimer = null
@@ -152,29 +130,15 @@ $(document).keypress (event) =>
     when 3 # ^C
       reset()
       return false
-    when 12 # ^L
-      $("#load_input").click()
-      return false
-    when 14 # ^N
-      step()
-      return false
+#    when 14 # ^N
+#      step()
+#      return false
     when 18 # ^R
       $("#button_run").click()
       return false
-    when 19 # ^S
-      window.URL = window.webkitURL or window.URL
-      if webui.CodeViewSet.visible()
-        codeview = webui.Tabs.activePane.data("codeview")
-        a = $("<a/>")
-        a.attr("download", codeview.getName())
-        a.attr("href", window.URL.createObjectURL(codeview.save()))
-        a.css("display", "hidden")
-        $("#body").append(a)
-        a[0].click()
-        a.remove()
-        return false
-  if not @runTimer? then return true
-  @keyboard.keypress(event.which)
+  if @runTimer? then return @keyboard.keypress(event.which)
+  if webui.Project.keypress(event.which) then return false
+  true
 
 $(document).keyup (event) =>
   if @input? then return true
@@ -198,18 +162,44 @@ $(document).ready =>
   @emulator.memory.watchReads 0, 0x10000, (addr) => @memoryReads.push(addr)
   @emulator.memory.watchWrites 0, 0x10000, (addr) => @memoryWrites.push(addr)
 
-  # thread "load" clicks through to the real file loader. (the web sucks.)
-  $("#load_input").bind("change", loadReally)
-
+  webui.Project.init()
   webui.Registers.init()
   webui.Tabs.init()
   webui.MemView.init()
-  webui.Tabs.openNewEditor()
+  webui.Tabs.openNewEditor().setCode(DEMO)
 
   reset()
   $(window).resize (event) -> resized()
   resized()
 
+
+DEMO = """; demo
+set a, 0
+set b, 0x80
+hwi 1
+set a, 3
+set b, 1
+hwi 1
+set a, 5
+set b, 0x200
+hwi 1
+set [0x200], 0x666
+set a, 2
+set b, 0x200
+hwi 1
+:go
+set [0x80], 0xe068
+set [0x81], 0xc069
+set [0x82], 0x8007
+set [0x83], [0x80]
+set [0xa0], 0xe0d2
+set [0xa1], 0xe0cf
+set [0xa2], 0xe0c2
+set [0xa3], 0xe0c5
+set [0xa4], 0xe0d9
+jmp go
+SUB PC, 1
+"""
 
 #  window.localStorage.setItem("robey", "hello")
 # window.localStorage.getItem("robey")

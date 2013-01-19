@@ -1,4 +1,6 @@
 
+Key = carrot16.Key
+
 class CodeView
   typingDelay: 1000
   typingTimer: null
@@ -13,11 +15,10 @@ class CodeView
     @tab = $("#code-tab-prototype").clone()
     @tab.css("display", "block")
     @tab.attr("id", @tabName)
-    $(".nav").data("robey", @tab)
     $(".nav").append(@tab)
     $("#left_panel").append(@pane)
     webui.Tabs.connect @tab, @pane
-    CodeViewSet.views.push(@)
+    CodeViewSet.add(@)
     @textarea = $("##{@name} .code-textarea")
     @textarea.bind "input", => @codeEdited()
     @textarea.bind "change", => @codeChanged()
@@ -28,7 +29,6 @@ class CodeView
     @dumpDiv = $("##{@name} .code-dump")
     @assembled = null
     @breakpoints = {}
-    Key = carrot16.Key
     @pane.data "keydown", (key) =>
       if key == Key.ENTER
         # many things about javascript and html/css are confounding to me,
@@ -234,6 +234,12 @@ CodeViewSet =
   atBreakpoint: ->
     for v in @views then if v.atBreakpoint() then return true
     false
+
+  add: (view) ->
+    @views.push(view)
+
+  remove: (view) ->
+    @views = @views.filter (x) -> x isnt view
 
 
 exports.CodeView = CodeView

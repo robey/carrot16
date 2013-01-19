@@ -41,12 +41,20 @@ Tabs =
   openNewEditor: ->
     view = new webui.CodeView()
     view.setName("(untitled)")
-    view.setCode(DEMO)
     view.activate()
+    view
 
+  closeCurrent: ->
+    if not @activePane? then return
+    if not webui.CodeViewSet.visible() then return
+    pane = @activePane
+    tab = pane.data("tab")
+    @next()
+    @tablist = @tablist.filter (x) -> x isnt tab
+    tab.remove()
+    CodeViewSet.remove(pane.data("codeview"))
+    pane.remove()
+    CodeViewSet.assemble()
+    
 
 exports.Tabs = Tabs
-
-DEMO = """; demo
-set a, 3
-"""
