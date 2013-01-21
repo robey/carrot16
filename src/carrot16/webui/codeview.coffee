@@ -206,6 +206,8 @@ class CodeView
     @dumpDiv.empty()
     @updatePcHighlight()
     if not @assembled? then return
+    ad = $("<div/>")
+    dd = $("<div/>")
     for info in @assembled.lines
       if info.data.length > 0
         addr = info.org
@@ -214,10 +216,12 @@ class CodeView
         span.addClass("pointer")
         do (addr) =>
           span.click(=> webui.MemView.scrollTo(addr))
-        @addrDiv.append(span)
-        @dumpDiv.append((for x in info.data then sprintf("%04x", x)).join(" "))
-      @addrDiv.append("<br/>")
-      @dumpDiv.append("<br/>")
+        ad.append(span)
+        dd.append((for x in info.data then sprintf("%04x", x)).join(" "))
+      ad.append("<br/>")
+      dd.append("<br/>")
+    @addrDiv.append(ad)
+    @dumpDiv.append(dd)
 
   debug: (message) ->
     console.log "[#{@name}] #{message}"
