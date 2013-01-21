@@ -26,6 +26,13 @@ based on work done for deNULL's server-based emulator.
 
 open-source licensed under apache 2. patches welcome!
 
+## bugs
+
+- error messages can hide the cursor
+- creating the dump takes so long, it should happen in the background
+- the monitor is REALLY big on small screens: go back to making it proportional, and using 1x1 pixels
+- in "chrome 24.0.1312.52", the 3 columns of code fall out of sync
+
 ## to-do
 
 - name tab
