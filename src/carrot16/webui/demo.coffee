@@ -7,8 +7,8 @@ DEMO_CODE = """; demo of carrot16 in action!
   jmp roll_colors
   brk
 
-monitor_lo = 0x7349
-monitor_hi = 0xf615
+monitor_hi = 0x7349
+monitor_lo = 0xf615
 clock_lo = 0xb402
 clock_hi = 0x12d0
 monitor.map_screen = 0
@@ -26,11 +26,11 @@ line_size = 32
   set i, 0
 :find_hardware.1
   hwq i
-  ife a, monitor_hi
-    ife b, monitor_lo
+  ife a, monitor_lo
+    ife b, monitor_hi
       set [monitor_hw], i
-  ife a, clock_hi
-    ife b, clock_lo
+  ife a, clock_lo
+    ife b, clock_hi
       set [clock_hw], i
   add i, 1
   ifg j, i
