@@ -27,6 +27,7 @@ class Editor
   init: ->
     @calculateEm()
     @lineHeight = parseInt(@element.css("line-height"))
+    @windowLines = Math.floor(@element.height() / @lineHeight)
     @clear()
     # force line numbers to be 5-em wide.
     @div.gutter.css("width", 5 * @em + 20)
@@ -115,11 +116,10 @@ class Editor
     windowBottom = windowTop + @element.height()
     cursorTop = @cursorY * @lineHeight
     cursorBottom = cursorTop + @lineHeight
-    windowLines = Math.floor((windowBottom - windowTop) / @lineHeight)
     if cursorTop < windowTop
       @element.scrollTop(Math.max(0, cursorTop - @lineHeight))
     else if cursorBottom > windowBottom
-      @element.scrollTop(cursorTop - @lineHeight * (windowLines - 2))
+      @element.scrollTop(cursorTop - @lineHeight * (@windowLines - 2))
 
   stopCursor: ->
     if @cursorTimer? then clearInterval(@cursorTimer)
@@ -156,6 +156,12 @@ class Editor
       when Key.RIGHT
         @right()
         false
+      when Key.PAGE_UP
+        @pageUp()
+        false
+      when Key.PAGE_DOWN
+        @pageDown()
+        false
       when Key.BACKSPACE
         @backspace()
         false
@@ -175,8 +181,7 @@ class Editor
   keypress: (event) ->
     switch event.which
       when CTRL_A
-        @cursorX = 0
-        @setCursor()
+        @home()
         false
       when CTRL_B
         @left()
@@ -224,8 +229,24 @@ class Editor
     if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
     @setCursor()
 
+  home: ->
+    @cursorX = 0
+    @setCursor()
+
   end: ->
     @cursorX = @lines[@cursorY].length
+    @setCursor()
+
+  pageUp: ->
+    @cursorY -= @windowLines
+    if @cursorY < 0 then @cursorY = 0
+    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @setCursor()
+
+  pageDown: ->
+    @cursorY += @windowLines
+    if @cursorY > @lines.length - 1 then @cursorY = @lines.length - 1
+    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
     @setCursor()
 
   deleteForward: ->
