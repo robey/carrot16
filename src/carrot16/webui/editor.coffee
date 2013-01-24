@@ -199,11 +199,19 @@ class Editor
   # actions
 
   left: ->
-    if @cursorX > 0 then @cursorX -= 1
+    if @cursorX > 0
+      @cursorX -= 1
+    else if @cursorY > 0
+      @cursorY -= 1
+      @cursorX = @lines[@cursorY].length
     @setCursor()
 
   right: ->
-    if @cursorX < @lines[@cursorY].length then @cursorX += 1
+    if @cursorX < @lines[@cursorY].length
+      @cursorX += 1
+    else if @cursorY < @lines.length - 1
+      @cursorY += 1
+      @cursorX = 0
     @setCursor()
 
   up: ->
