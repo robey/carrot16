@@ -3,7 +3,6 @@
 # todo:
 # - undo
 # - syntax highlighting
-# - fixHeights line numbers
 #
 
 class Editor
@@ -11,11 +10,12 @@ class Editor
 
   constructor: (@element) ->
     @div =
+      textBackground: element.find(".editor-text-background")
+      scroll: element.find(".editor-scroll")
       gutter: element.find(".editor-gutter")
       lineNumbers: []
       text: element.find(".editor-text")
       lines: []
-      textBackground: element.find(".editor-text-background")
       listing: element.find(".editor-listing")
       cursor: element.find(".editor-cursor")
       cursorHighlight: element.find(".editor-cursor-highlight")
@@ -25,8 +25,7 @@ class Editor
   init: ->
     @calculateEm()
     @lineHeight = parseInt(@element.css("line-height"))
-    @setCursor()
-    @fixHeights()
+    @clear()
     # force line numbers to be 5-em wide.
     @div.gutter.css("width", 5 * @em + 20)
     # force listing to be 20-em wide.
@@ -38,6 +37,7 @@ class Editor
     @div.text.keypress (event) => @keypress(event)
     @div.text.click (event) => @moveCursor(event)
     # start!
+    @setCursor()
     @div.text.focus()
 
   # fix the heights of various elements to match the current text size
@@ -45,7 +45,7 @@ class Editor
     # make background size match editor
     @div.textBackground.css("width", @div.text.width())
     @div.textBackground.css("height", @div.text.height())# - @div.text.position().top)
-    @div.textBackground.css("top", @div.text.position().top)
+    @div.textBackground.css("top", 2)
     @div.textBackground.css("left", @div.text.position().left)
     # line numbers!
     if @div.lineNumbers.length < @lines.length
@@ -154,6 +154,9 @@ class Editor
       when Key.RIGHT
         @right()
         false
+      when Key.BACKSPACE
+        @backspace()
+        false
       when Key.DELETE
         @deleteForward()
         false
@@ -173,8 +176,7 @@ class Editor
         @deleteForward()
         false
       when CTRL_E
-        @cursorX = @lines[@cursorY].length
-        @setCursor()
+        @end()
         false
       else
         true
@@ -199,6 +201,10 @@ class Editor
     if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
     @setCursor()
 
+  end: ->
+    @cursorX = @lines[@cursorY].length
+    @setCursor()
+
   deleteForward: ->
     if @cursorX < @lines[@cursorY].length
       @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + @lines[@cursorY][@cursorX + 1 ...]
@@ -208,6 +214,18 @@ class Editor
       @refreshLine(@cursorY)
       @deleteLine(@cursorY + 1)
     false
+
+  backspace: ->
+    if @cursorX > 0
+      @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX - 1] + @lines[@cursorY][@cursorX ...]
+      @refreshLine(@cursorY)
+      @left()
+    else if @cursorY > 0
+      @cursorX = @lines[@cursorY - 1].length
+      @lines[@cursorY - 1] = @lines[@cursorY - 1] + @lines[@cursorY]
+      @refreshLine(@cursorY - 1)
+      @deleteLine(@cursorY)
+      @up()
 
 #exports.Editor = Editor
 
