@@ -5,6 +5,8 @@
 # - syntax highlighting
 #
 
+Array.prototype.insert = (n, x) -> @splice(n, 0, x)
+
 class Editor
   CURSOR_RATE: 500
 
@@ -160,6 +162,13 @@ class Editor
       when Key.DELETE
         @deleteForward()
         false
+      when Key.SPACE
+        # chrome bug.
+        @insert(Key.SPACE)
+        false
+      when Key.ENTER
+        @enter()
+        false
       else
         true
 
@@ -178,7 +187,13 @@ class Editor
       when CTRL_E
         @end()
         false
+      when CTRL_F
+        @right()
+        false
       else
+        if event.which >= 0x20 and event.which <= 0x7e
+          @insert(event.which)
+          false
         true
 
   # actions
@@ -209,7 +224,7 @@ class Editor
     if @cursorX < @lines[@cursorY].length
       @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + @lines[@cursorY][@cursorX + 1 ...]
       @refreshLine(@cursorY)
-    else if @cursorY < @lines.length
+    else if @cursorY < @lines.length - 1
       @lines[@cursorY] = @lines[@cursorY] + @lines[@cursorY + 1]
       @refreshLine(@cursorY)
       @deleteLine(@cursorY + 1)
@@ -226,6 +241,26 @@ class Editor
       @refreshLine(@cursorY - 1)
       @deleteLine(@cursorY)
       @up()
+
+  insert: (c) ->
+    @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + String.fromCharCode(c) + @lines[@cursorY][@cursorX ...]
+    @refreshLine(@cursorY)
+    @right()
+
+  enter: ->
+    # coffeescript syntax for array insert is bizarre.
+    @lines.insert(@cursorY + 1, @lines[@cursorY][@cursorX ...])
+    @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
+    div = @newLine(@lines[@cursorY + 1])
+    @div.lines.insert(@cursorY + 1, div)
+    @div.text.append(div)
+    div.insertAfter(@div.lines[@cursorY])
+    @refreshLine(@cursorY)
+    @refreshLine(@cursorY + 1)
+    @down()
+    @cursorX = 0
+    @setCursor()
+    @fixHeights()
 
 #exports.Editor = Editor
 
@@ -266,6 +301,7 @@ CTRL_B = 2
 CTRL_C = 3
 CTRL_D = 4
 CTRL_E = 5
+CTRL_F = 6
 
 @text = """\
 :start
