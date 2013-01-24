@@ -3,6 +3,9 @@
 # todo:
 # - undo
 # - syntax highlighting
+# - ^K
+# - mark selection
+# - copy / paste
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
@@ -195,6 +198,21 @@ class Editor
       when CTRL_F
         @right()
         false
+      when CTRL_H
+        @backspace()
+        false
+      when CTRL_K
+        @deleteToEol()
+        false
+      when CTRL_L
+        @centerLine()
+        false
+      when CTRL_N
+        @down()
+        false
+      when CTRL_P
+        @up()
+        false
       else
         if event.which >= 0x20 and event.which <= 0x7e
           @insert(event.which)
@@ -271,6 +289,14 @@ class Editor
       @deleteLine(@cursorY)
       @up()
 
+  deleteToEol: ->
+    @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
+    @refreshLine(@cursorY)
+
+  centerLine: ->
+    topLine = Math.max(@cursorY - Math.floor((@windowLines - 1) / 2), 0)
+    @element.scrollTop(topLine * @lineHeight)
+
   insert: (c) ->
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + String.fromCharCode(c) + @lines[@cursorY][@cursorX ...]
     @refreshLine(@cursorY)
@@ -331,6 +357,16 @@ CTRL_C = 3
 CTRL_D = 4
 CTRL_E = 5
 CTRL_F = 6
+CTRL_G = 7
+CTRL_H = 8
+CTRL_I = 9
+CTRL_J = 10
+CTRL_K = 11
+CTRL_L = 12
+CTRL_M = 13
+CTRL_N = 14
+CTRL_O = 15
+CTRL_P = 16
 
 @text = """\
 :start
