@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>editor test</title>
+    <script type="text/javascript" src="js/lib/jquery-1.8.3.js"></script>
+    <script type="text/javascript" src="js/lib/bootstrap-2.2.2.min.js"></script>
+    <script type="text/javascript" src="js/lib/sprintf-0.7-beta1.js"></script>
+    <script type="text/javascript" src="lib/carrot16/webui/editor.js"></script>
+    <link rel="stylesheet" href="css/bootstrap-2.2.2.css" />
+    <link rel="stylesheet" href="css/editor.css" />
+    <link rel="shortcut icon" type="image/png" href="./images/carrot.png" />
+  </head>
+  <body>
+    <div class="editor" id="editor" style="width: 60%">
+      <div class="editor-cursor-highlight"></div>
+      <div class="editor-linenumbers mono">
+        <div class="editor-linenumber" id="ln0">1</div>
+        <div class="editor-linenumber" id="ln1">22</div>
+        <div class="editor-linenumber" id="ln2">333</div>
+        <div class="editor-linenumber" id="ln3">4444</div>
+        <div class="editor-linenumber" id="ln4">5</div>
+      </div>
+      <div class="editor-listing mono">
+        <div id="ll0">&nbsp;</div>
+        <div id="ll1">0000: 9f03 4444 3333 2222</div>
+        <div id="ll2">0001: 4512</div>
+        <div id="ll3">&nbsp;</div>
+        <div id="ll4">0002: ffa1 9999 8888 7777</div>
+      </div>
+      <div class="editor-text-background editor-side-padding"></div>
+      <div class="editor-text editor-side-padding mono editable"  tabindex="-1">
+        <div class="editor-line" id="lt0">:start</div>
+        <div class="editor-line" id="lt1">  SET A, 3</div>
+        <div class="editor-line" id="lt2">  ADD X, A</div>
+        <div class="editor-line" id="lt3">  ; return</div>
+        <div class="editor-line" id="lt4">  RET</div>
+        <div class="editor-cursor"></div>
+      </div>
+    </div>
+  </body>
+</html>

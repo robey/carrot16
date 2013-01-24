@@ -1,0 +1,111 @@
+html {
+  height: 100%;
+  overflow-y: hidden;
+}
+
+body {
+  padding: 1em;
+  height: 100%;
+}
+
+a {
+  text-decoration: none !important;
+}
+
+.mono {
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* ----- actual editor stuff ----- */
+
+.editor {
+  min-height: 100px;
+  min-width: 10em;
+  overflow-x: hidden;
+  background-color: #eee;
+  position: relative;
+  z-index: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.editor *:focus {
+  outline: none;
+}
+
+.editor-linenumbers {
+  float: left;
+  height: 100%;
+  text-align: right;
+}
+
+.editor-linenumbers .editor-linenumber {
+  padding-left: 0px;
+  padding-right: 10px;
+}
+/*
+.editor-linenumbers .editor-linenumber:nth-of-type(even) {
+  background-color: #ddd;
+}
+.editor-linenumbers .editor-linenumber:nth-of-type(odd) {
+  background-color: #eee;
+}
+*/
+
+.editor-side-padding {
+  padding-left: 3px;
+  padding-right: 3px;
+}
+
+.editor-text-background {
+  position: absolute;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: #fff;
+  z-index: -9;
+  cursor: text;
+}
+
+.editor-text {
+  position: relative;
+  height: 100%;
+  overflow-x: hidden;
+  cursor: text;
+}
+
+.editor-line {
+  white-space: pre;
+  cursor: text;
+}
+
+.editor-listing {
+  float: right;
+  height: 100%;
+  width: 10em;
+  padding-left: 10px;
+  overflow: hidden;
+}
+
+.editor-listing div {
+  white-space: nowrap;
+  overflow: hidden;
+  height: 20px;
+}
+
+.editor-cursor {
+  position: absolute;
+  height: 18px;
+  width: 1px;
+  border-left: solid 1px #008;
+}
+
+.editor-cursor-highlight {
+  position: absolute;
+  height: 20px;
+  width: 100%;
+  background-color: #ddf;
+  z-index: -1;
+  opacity: 0.5;
+}
