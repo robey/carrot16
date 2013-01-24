@@ -1,54 +1,123 @@
 
+#
+# todo:
+# - undo
+# - syntax highlighting
+# - fixHeights line numbers
+#
+
 class Editor
   CURSOR_RATE: 500
 
   constructor: (@element) ->
     @div =
-      lineNumbers: element.find(".editor-linenumbers")
+      gutter: element.find(".editor-gutter")
+      lineNumbers: []
       text: element.find(".editor-text")
+      lines: []
       textBackground: element.find(".editor-text-background")
       listing: element.find(".editor-listing")
       cursor: element.find(".editor-cursor")
       cursorHighlight: element.find(".editor-cursor-highlight")
+    @lines = []
     setTimeout((=> @init()), 1)
 
   init: ->
     @calculateEm()
     @lineHeight = parseInt(@element.css("line-height"))
-    # contents being edited:
-    @lines = [ ":start", "  SET A, 3", "  ADD X, A", "  ; return", "  RET" ]
-    @cursorY = 1
-    @cursorX = 0
     @setCursor()
-    @stopCursor()
+    @fixHeights()
     # force line numbers to be 5-em wide.
-    @div.lineNumbers.css("width", 5 * @em + 20)
+    @div.gutter.css("width", 5 * @em + 20)
     # force listing to be 20-em wide.
     @div.listing.css("width", 22 * @em)
-    # make background size match editor
-    @div.textBackground.css("width", @div.text.width())
-    @div.textBackground.css("height", @div.text.height())
-    @div.textBackground.css("top", @div.text.position().top)
-    @div.textBackground.css("left", @div.text.position().left)
     # hook up keyboard control
     @div.text.focus => @startCursor()
     @div.text.blur => @stopCursor()
     @div.text.keydown (event) => @keydown(event)
     @div.text.keypress (event) => @keypress(event)
     @div.text.click (event) => @moveCursor(event)
+    # start!
+    @div.text.focus()
+
+  # fix the heights of various elements to match the current text size
+  fixHeights: ->
+    # make background size match editor
+    @div.textBackground.css("width", @div.text.width())
+    @div.textBackground.css("height", @div.text.height())# - @div.text.position().top)
+    @div.textBackground.css("top", @div.text.position().top)
+    @div.textBackground.css("left", @div.text.position().left)
+    # line numbers!
+    if @div.lineNumbers.length < @lines.length
+      for n in [@div.lineNumbers.length ... @lines.length]
+        div = $("<div />")
+        div.addClass("editor-linenumber")
+        div.text(n + 1)
+        @div.lineNumbers.push(div)
+        @div.gutter.append(div)
+    else if @div.lineNumbers.length > @lines.length
+      for div in @div.lineNumbers[@lines.length ...] then div.remove()
+      @div.lineNumbers[@lines.length ...] = []
 
   calculateEm: ->
     span = $("<span>0</span>")
-    @div.lineNumbers.append(span)
+    @div.gutter.append(span)
     @em = span.outerWidth(true)
     span.remove()
-    console.log("em = #{@em}")
+
+  clear: ->
+    for line in @div.lines then line.remove()
+    @div.lines = [ ]
+    @lines = [ ]
+    @cursorX = 0
+    @cursorY = 0
+    @fixHeights()
+
+  replaceText: (text) ->
+    @clear()
+    for line in text.split("\n")
+      @lines.push line
+      div = @newLine(line)
+      @div.lines.push div
+      @div.text.append div
+    @fixHeights()
+
+  # ----- line manipulation
+
+  # factor out the code to make new div lines
+  newLine: (line) ->
+    div = $("<div />")
+    div.addClass("editor-line")
+    div.text(line)
+    div
+
+  refreshLine: (n) ->
+    @div.lines[n].text(@lines[n])
+
+  deleteLine: (n) ->
+    @lines[n..n] = []
+    div = @div.lines[n]
+    @div.lines[n..n] = []
+    div.remove()
+    @fixHeights()
+
+  # -----
 
   setCursor: ->
     @div.cursor.css("top", @cursorY * @lineHeight + 1)
     @div.cursor.css("left", @cursorX * @em - 1 + 3)
     @div.cursorHighlight.css("top", @cursorY * @lineHeight + 2)
     @div.cursor.css("display", "block")
+    # is the cursor off-screen? :(
+    windowTop = @element.scrollTop()
+    windowBottom = windowTop + @element.height()
+    cursorTop = @cursorY * @lineHeight
+    cursorBottom = cursorTop + @lineHeight
+    windowLines = Math.floor((windowBottom - windowTop) / @lineHeight)
+    if cursorTop < windowTop
+      @element.scrollTop(Math.max(0, cursorTop - @lineHeight))
+    else if cursorBottom > windowBottom
+      @element.scrollTop(cursorTop - @lineHeight * (windowLines - 2))
 
   stopCursor: ->
     if @cursorTimer? then clearInterval(@cursorTimer)
@@ -131,11 +200,13 @@ class Editor
     @setCursor()
 
   deleteForward: ->
-    console.log "del"
     if @cursorX < @lines[@cursorY].length
       @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + @lines[@cursorY][@cursorX + 1 ...]
-    else
-      0
+      @refreshLine(@cursorY)
+    else if @cursorY < @lines.length
+      @lines[@cursorY] = @lines[@cursorY] + @lines[@cursorY + 1]
+      @refreshLine(@cursorY)
+      @deleteLine(@cursorY + 1)
     false
 
 #exports.Editor = Editor
@@ -178,6 +249,15 @@ CTRL_C = 3
 CTRL_D = 4
 CTRL_E = 5
 
+@text = """\
+:start
+  SET A, 8
+  ADD X, A
+  ; return
+  RET
+"""
+
 $(document).ready =>
   @editor = new Editor($("#editor"))
+  setTimeout((=> @editor.replaceText(@text)), 100)
 

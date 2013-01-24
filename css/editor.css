@@ -4,7 +4,8 @@ html {
 }
 
 body {
-  padding: 1em;
+  padding-left: 1em;
+  padding-right: 1em;
   height: 100%;
 }
 
@@ -21,38 +22,34 @@ a {
 /* ----- actual editor stuff ----- */
 
 .editor {
-  min-height: 100px;
+  height: 100%;
   min-width: 10em;
   overflow-x: hidden;
   background-color: #eee;
   position: relative;
   z-index: 0;
-  padding-top: 2px;
-  padding-bottom: 2px;
 }
 
 .editor *:focus {
   outline: none;
 }
 
-.editor-linenumbers {
+.editor-scroll {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.editor-gutter {
   float: left;
   height: 100%;
   text-align: right;
+  min-height: 20px;
 }
 
-.editor-linenumbers .editor-linenumber {
+.editor-gutter .editor-linenumber {
   padding-left: 0px;
   padding-right: 10px;
 }
-/*
-.editor-linenumbers .editor-linenumber:nth-of-type(even) {
-  background-color: #ddd;
-}
-.editor-linenumbers .editor-linenumber:nth-of-type(odd) {
-  background-color: #eee;
-}
-*/
 
 .editor-side-padding {
   padding-left: 3px;
@@ -78,6 +75,7 @@ a {
 .editor-line {
   white-space: pre;
   cursor: text;
+  min-height: 20px;
 }
 
 .editor-listing {
