@@ -73,9 +73,19 @@ a {
 }
 
 .editor-line {
+  position: relative;
   white-space: pre;
   cursor: text;
   min-height: 20px;
+}
+
+.editor-selection {
+  background-color: #08f;
+  position: absolute;
+  z-index: -1;
+  opacity: 0.5;
+  top: 0px;
+  height: 20px;
 }
 
 .editor-listing {

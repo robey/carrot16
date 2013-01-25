@@ -3,7 +3,6 @@
 # todo:
 # - undo
 # - syntax highlighting
-# - ^K
 # - mark selection
 # - copy / paste
 #
@@ -25,6 +24,8 @@ class Editor
       cursor: element.find(".editor-cursor")
       cursorHighlight: element.find(".editor-cursor-highlight")
     @lines = []
+    @selection = null
+    @selectionIndex = 0
     setTimeout((=> @init()), 1)
 
   init: ->
@@ -98,7 +99,18 @@ class Editor
     div
 
   refreshLine: (n) ->
+    if n < 0 or n >= @lines.length then return
+    @div.lines[n].empty()
     @div.lines[n].text(@lines[n])
+    # check for selection
+    if @selection? and n >= @selection[0].y and n <= @selection[1].y
+      x0 = if n > @selection[0].y then 0 else @selection[0].x
+      x1 = if n < @selection[1].y then @lines[n].length else @selection[1].x
+      box = $("<div />")
+      box.addClass("editor-selection")
+      @div.lines[n].append(box)
+      box.css("left", x0 * @em)
+      box.css("width", (x1 - x0) * @em)
 
   deleteLine: (n) ->
     @lines[n..n] = []
@@ -107,7 +119,7 @@ class Editor
     div.remove()
     @fixHeights()
 
-  # -----
+  # ----- cursor
 
   setCursor: ->
     @div.cursor.css("top", @cursorY * @lineHeight + 1)
@@ -145,13 +157,22 @@ class Editor
     @cursorX = x
     @setCursor()
 
+  moveDown: ->
+    if @cursorY < @lines.length - 1 then @cursorY += 1
+    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @setCursor()
+
+
+  # ----- key bindings
+
   keydown: (event) ->
+    console.log event
     switch event.which
       when Key.UP
         @up()
         false
       when Key.DOWN
-        @down()
+        if event.shiftKey then @selectDown() else @down()
         false
       when Key.LEFT
         @left()
@@ -219,7 +240,7 @@ class Editor
           false
         true
 
-  # actions
+  # ----- actions
 
   left: ->
     if @cursorX > 0
@@ -243,9 +264,8 @@ class Editor
     @setCursor()
 
   down: ->
-    if @cursorY < @lines.length - 1 then @cursorY += 1
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
-    @setCursor()
+    @cancelSelection()
+    @moveDown()
 
   home: ->
     @cursorX = 0
@@ -303,7 +323,6 @@ class Editor
     @right()
 
   enter: ->
-    # coffeescript syntax for array insert is bizarre.
     @lines.insert(@cursorY + 1, @lines[@cursorY][@cursorX ...])
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
     div = @newLine(@lines[@cursorY + 1])
@@ -316,6 +335,33 @@ class Editor
     @cursorX = 0
     @setCursor()
     @fixHeights()
+
+  # ----- selection
+
+  SELECTION_LEFT: 0
+  SELECTION_RIGHT: 1
+
+  # start a selection if one isn't already ongoing
+  startSelection: (index) ->
+    if @selection? then return
+    @selection = [ { x: @cursorX, y: @cursorY }, { x: @cursorX, y: @cursorY } ]
+    @selectionIndex = index
+
+  cancelSelection: ->
+    if not @selection? then return
+    y0 = @selection[0].y
+    y1 = @selection[1].y
+    @selection = null
+    for n in [y0..y1] then @refreshLine(n)
+
+  selectDown: ->
+    @startSelection(@SELECTION_RIGHT)
+    @moveDown()
+    @selection[@selectionIndex].x = @cursorX
+    @selection[@selectionIndex].y = @cursorY
+    @refreshLine(@cursorY - 1)
+    @refreshLine(@cursorY)
+
 
 #exports.Editor = Editor
 
