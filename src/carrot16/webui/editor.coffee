@@ -3,7 +3,11 @@
 # todo:
 # - undo
 # - syntax highlighting
-# - mark selection
+# - shift-cursor select
+# - double-click select
+# - shift-click select
+# - triple-click select
+# - drag-click select
 # - copy / paste
 #
 
@@ -42,7 +46,9 @@ class Editor
     @div.text.blur => @stopCursor()
     @div.text.keydown (event) => @keydown(event)
     @div.text.keypress (event) => @keypress(event)
-    @div.text.click (event) => @moveCursor(event)
+    @div.text.click (event) => @moveCursorByMouse(event)
+    @div.text.mousedown (event) => @mouseDownEvent(event)
+    @div.text.mouseup (event) => @mouseUpEvent(event)
     # start!
     @setCursor()
     @div.text.focus()
@@ -147,14 +153,45 @@ class Editor
   blinkCursor: ->
     @div.cursor.css("display", if @div.cursor.css("display") == "none" then "block" else "none")
 
-  moveCursor: (event) ->
+  mouseToPosition: (event) ->
     offset = @div.text.offset()
     x = Math.round((event.pageX - offset.left) / @em - 0.3)
     y = Math.floor((event.pageY - offset.top) / @lineHeight)
     if y >= @lines.length then y = @lines.length - 1
     if x > @lines[y].length then x = @lines[y].length
-    @cursorY = y
-    @cursorX = x
+    [ x, y ]
+
+  mouseDownEvent: (event) ->
+    [ x, y ] = @mouseToPosition(event)
+    if event.shiftKey
+      @addSelection(x, y)
+    else
+      @cancelSelection()
+      @startSelection(@SELECTION_RIGHT, x, y)
+    @div.text.mousemove (event) => @mouseMoveEvent(event)
+    $(window).mouseup (event) => @cancelSelection()
+    false
+
+  mouseUpEvent: (event) ->
+    [ x, y ] = @mouseToPosition(event)
+    @div.text.unbind("mousemove")
+    @addSelection(x, y)
+    [ @cursorX, @cursorY ] = [ x, y ]
+    @setCursor()
+    false
+
+  mouseMoveEvent: (event) ->
+    [ x, y ] = @mouseToPosition(event)
+    if @selection? then @addSelection(x, y)
+
+  moveCursorByMouse: (event) ->
+    [ @cursorX, @cursorY ] = @mouseToPosition(event)
+    @cancelSelection()
+    @setCursor()
+
+  moveUp: ->
+    if @cursorY > 0 then @cursorY -= 1
+    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
     @setCursor()
 
   moveDown: ->
@@ -162,23 +199,37 @@ class Editor
     if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
     @setCursor()
 
+  moveLeft: ->
+    if @cursorX > 0
+      @cursorX -= 1
+    else if @cursorY > 0
+      @cursorY -= 1
+      @cursorX = @lines[@cursorY].length
+    @setCursor()
+
+  moveRight: ->
+    if @cursorX < @lines[@cursorY].length
+      @cursorX += 1
+    else if @cursorY < @lines.length - 1
+      @cursorY += 1
+      @cursorX = 0
+    @setCursor()
 
   # ----- key bindings
 
   keydown: (event) ->
-    console.log event
     switch event.which
       when Key.UP
-        @up()
+        if event.shiftKey then @selectUp() else @up()
         false
       when Key.DOWN
         if event.shiftKey then @selectDown() else @down()
         false
       when Key.LEFT
-        @left()
+        if event.shiftKey then @selectLeft() else @left()
         false
       when Key.RIGHT
-        @right()
+        if event.shiftKey then @selectRight() else @right()
         false
       when Key.PAGE_UP
         @pageUp()
@@ -243,25 +294,16 @@ class Editor
   # ----- actions
 
   left: ->
-    if @cursorX > 0
-      @cursorX -= 1
-    else if @cursorY > 0
-      @cursorY -= 1
-      @cursorX = @lines[@cursorY].length
-    @setCursor()
+    @cancelSelection()
+    @moveLeft()
 
   right: ->
-    if @cursorX < @lines[@cursorY].length
-      @cursorX += 1
-    else if @cursorY < @lines.length - 1
-      @cursorY += 1
-      @cursorX = 0
-    @setCursor()
+    @cancelSelection()
+    @moveRight()
 
   up: ->
-    if @cursorY > 0 then @cursorY -= 1
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
-    @setCursor()
+    @cancelSelection()
+    @moveUp()
 
   down: ->
     @cancelSelection()
@@ -342,9 +384,9 @@ class Editor
   SELECTION_RIGHT: 1
 
   # start a selection if one isn't already ongoing
-  startSelection: (index) ->
+  startSelection: (index, x, y) ->
     if @selection? then return
-    @selection = [ { x: @cursorX, y: @cursorY }, { x: @cursorX, y: @cursorY } ]
+    @selection = [ { x: x, y: y }, { x: x, y: y } ]
     @selectionIndex = index
 
   cancelSelection: ->
@@ -354,14 +396,36 @@ class Editor
     @selection = null
     for n in [y0..y1] then @refreshLine(n)
 
-  selectDown: ->
-    @startSelection(@SELECTION_RIGHT)
-    @moveDown()
-    @selection[@selectionIndex].x = @cursorX
-    @selection[@selectionIndex].y = @cursorY
-    @refreshLine(@cursorY - 1)
-    @refreshLine(@cursorY)
+  addSelection: (x, y) ->
+    oldx = @selection[@selectionIndex].x
+    oldy = @selection[@selectionIndex].y
+    @selection[@selectionIndex].x = x
+    @selection[@selectionIndex].y = y
+    # might need to reverse the order
+    if @selection[1].y < @selection[0].y or (@selection[1].y == @selection[0].y and @selection[1].x < @selection[0].x)
+      [ @selection[0], @selection[1] ] = [ @selection[1], @selection[0] ]
+      @selectionIndex = 1 - @selectionIndex
+    for n in [Math.min(@selection[0].y, oldy) .. Math.max(@selection[1].y, oldy)] then @refreshLine(n)
 
+  selectUp: ->
+    @startSelection(@SELECTION_LEFT, @cursorX, @cursorY)
+    @moveUp()
+    @addSelection(@cursorX, @cursorY)
+
+  selectDown: ->
+    @startSelection(@SELECTION_RIGHT, @cursorX, @cursorY)
+    @moveDown()
+    @addSelection(@cursorX, @cursorY)
+
+  selectLeft: ->
+    @startSelection(@SELECTION_LEFT, @cursorX, @cursorY)
+    @moveLeft()
+    @addSelection(@cursorX, @cursorY)
+
+  selectRight: ->
+    @startSelection(@SELECTION_RIGHT, @cursorX, @cursorY)
+    @moveRight()
+    @addSelection(@cursorX, @cursorY)
 
 #exports.Editor = Editor
 
