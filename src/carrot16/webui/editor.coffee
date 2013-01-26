@@ -3,18 +3,19 @@
 # todo:
 # - undo
 # - syntax highlighting
-# - shift-cursor select
 # - double-click select
-# - shift-click select
 # - triple-click select
-# - drag-click select
 # - copy / paste
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
 
 class Editor
+  # cursor blink rate (msec)
   CURSOR_RATE: 500
+
+  # rate at which scrolling should happen when the mouse button is held past the edge of the editor (msec)
+  AUTO_SCROLL_RATE: 100
 
   constructor: (@element) ->
     @div =
@@ -127,11 +128,14 @@ class Editor
 
   # ----- cursor
 
-  setCursor: ->
+  moveCursor: ->
     @div.cursor.css("top", @cursorY * @lineHeight + 1)
     @div.cursor.css("left", @cursorX * @em - 1 + 3)
     @div.cursorHighlight.css("top", @cursorY * @lineHeight + 2)
     @div.cursor.css("display", "block")
+
+  setCursor: ->
+    @moveCursor()
     # is the cursor off-screen? :(
     windowTop = @element.scrollTop()
     windowBottom = windowTop + @element.height()
@@ -140,7 +144,7 @@ class Editor
     if cursorTop < windowTop
       @element.scrollTop(Math.max(0, cursorTop - @lineHeight))
     else if cursorBottom > windowBottom
-      @element.scrollTop(cursorTop - @lineHeight * (@windowLines - 2))
+      @element.scrollTop(cursorTop - @lineHeight * (@windowLines - 1))
 
   stopCursor: ->
     if @cursorTimer? then clearInterval(@cursorTimer)
@@ -158,6 +162,7 @@ class Editor
     x = Math.round((event.pageX - offset.left) / @em - 0.3)
     y = Math.floor((event.pageY - offset.top) / @lineHeight)
     if y >= @lines.length then y = @lines.length - 1
+    if y < 0 then y = 0
     if x > @lines[y].length then x = @lines[y].length
     [ x, y ]
 
@@ -169,20 +174,55 @@ class Editor
       @cancelSelection()
       @startSelection(@SELECTION_RIGHT, x, y)
     @div.text.mousemove (event) => @mouseMoveEvent(event)
+    @div.text.mouseout (event) => @mouseOutEvent(event)
+    @div.text.mouseover (event) => @mouseOverEvent(event)
     $(window).mouseup (event) => @cancelSelection()
     false
 
   mouseUpEvent: (event) ->
     [ x, y ] = @mouseToPosition(event)
-    @div.text.unbind("mousemove")
-    @addSelection(x, y)
     [ @cursorX, @cursorY ] = [ x, y ]
     @setCursor()
+    if not @selection? then return
+    @div.text.unbind("mousemove")
+    @div.text.unbind("mouseout")
+    @div.text.unbind("mouseover")
+    clearTimeout(@autoScrollTimer)
+    @autoScrollTimer = null
+    @addSelection(x, y)
     false
 
   mouseMoveEvent: (event) ->
     [ x, y ] = @mouseToPosition(event)
+    [ @cursorX, @cursorY ] = [ x, y ]
     if @selection? then @addSelection(x, y)
+    @moveCursor()
+
+  mouseOutEvent: (event) =>
+    # weird chrome bug makes it send us a blur for moving between lines.
+    if event.toElement.parentElement is @div.text[0] then return
+    [ x, y ] = @mouseToPosition(event)
+    [ @cursorX, @cursorY ] = [ x, y ]
+    @setCursor()
+    @addSelection(x, y)
+    # okay, so we want to slowly scroll the text area to let the user keep selecting.
+    if @autoScrollTimer? then return
+    if event.pageY <= @element.offset().top
+      @autoScrollTimer = setInterval((=> @autoScroll(-1)), @AUTO_SCROLL_RATE)
+    else if event.pageY >= @element.offset().top + @element.height() - 2
+      @autoScrollTimer = setInterval((=> @autoScroll(1)), @AUTO_SCROLL_RATE)
+    else
+      @cancelSelection()
+
+  mouseOverEvent: (event) =>
+    # weird chrome bug makes it send us a blur for moving between lines.
+    if event.fromElement.parentElement is @div.text[0] then return
+    clearInterval(@autoScrollTimer)
+    @autoScrollTimer = null
+
+  autoScroll: (direction) =>
+    if direction > 0 then @moveDown() else @moveUp()
+    @addSelection(@cursorX, @cursorY)
 
   moveCursorByMouse: (event) ->
     [ @cursorX, @cursorY ] = @mouseToPosition(event)
@@ -395,8 +435,16 @@ class Editor
     y1 = @selection[1].y
     @selection = null
     for n in [y0..y1] then @refreshLine(n)
+    @div.text.unbind("mousemove")
+    @div.text.unbind("mouseout")
+    @div.text.unbind("mouseover")
+    clearInterval(@autoScrollTimer)
+    @autoScrollTimer = null
 
   addSelection: (x, y) ->
+    if not @selection?
+      @cancelSelection()
+      return
     oldx = @selection[@selectionIndex].x
     oldy = @selection[@selectionIndex].y
     @selection[@selectionIndex].x = x
@@ -484,6 +532,14 @@ CTRL_P = 16
   ADD X, A
   ; return
   RET
+  a
+  b
+  c
+  d
+  e
+  f
+  g
+  h
 """
 
 $(document).ready =>
