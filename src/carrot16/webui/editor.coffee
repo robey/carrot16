@@ -4,7 +4,6 @@
 # - undo
 # - syntax highlighting
 # - copy / paste
-# - backspace / del / insert should behave differently when a selection is made.
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
