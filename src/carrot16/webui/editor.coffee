@@ -3,9 +3,8 @@
 # todo:
 # - undo
 # - syntax highlighting
-# - double-click select
-# - triple-click select
 # - copy / paste
+# - backspace / del / insert should behave differently when a selection is made.
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
@@ -378,6 +377,9 @@ class Editor
     @setCursor()
 
   deleteForward: ->
+    if @selection?
+      @deleteSelection()
+      return
     if @cursorX < @lines[@cursorY].length
       @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + @lines[@cursorY][@cursorX + 1 ...]
       @refreshLine(@cursorY)
@@ -388,6 +390,9 @@ class Editor
     false
 
   backspace: ->
+    if @selection?
+      @deleteSelection()
+      return
     if @cursorX > 0
       @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX - 1] + @lines[@cursorY][@cursorX ...]
       @refreshLine(@cursorY)
@@ -463,6 +468,26 @@ class Editor
       @selectionIndex = 1 - @selectionIndex
     for n in [Math.min(@selection[0].y, oldy) .. Math.max(@selection[1].y, oldy)] then @refreshLine(n)
 
+  deleteSelection: ->
+    [ y0, y1 ] = [ @selection[0].y, @selection[1].y ]
+    if y0 == y1
+      # within one line
+      @lines[y0] = @lines[y0][0 ... @selection[0].x] + @lines[y0][@selection[1].x ...]
+    else
+      # multi-line
+      @lines[y0] = @lines[y0][0 ... @selection[0].x] + @lines[y1][@selection[1].x ...]
+      for y in [y0 + 1 .. y1] then @deleteLine(y0 + 1)
+    @cursorX = @selection[0].x
+    @cursorY = y0
+    @selection = null
+    @refreshLine(y0)
+    @setCursor()
+    if @lines[y0].length == 0 and y0 > 0
+      # just delete the whole line
+      @cursorX = @lines[y0 - 1].length
+      @deleteLine(y0)
+      @moveUp()
+
   selectUp: ->
     @startSelection(@SELECTION_LEFT, @cursorX, @cursorY)
     @moveUp()
@@ -499,7 +524,7 @@ class Editor
     if @lines[@cursorY].length == 0 then return
     @startSelection(@SELECTION_RIGHT, 0, @cursorY)
     @addSelection(@lines[@cursorY].length, @cursorY)
-    
+
 #exports.Editor = Editor
 
 
