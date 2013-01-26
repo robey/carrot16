@@ -413,6 +413,7 @@ class Editor
     @element.scrollTop(topLine * @lineHeight)
 
   insert: (c) ->
+    if @selection? then @deleteSelection()
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + String.fromCharCode(c) + @lines[@cursorY][@cursorX ...]
     @refreshLine(@cursorY)
     @right()
