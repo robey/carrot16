@@ -17,6 +17,8 @@ class Editor
   # rate at which scrolling should happen when the mouse button is held past the edge of the editor (msec)
   AUTO_SCROLL_RATE: 100
 
+  DOUBLE_CLICK_RATE: 200
+
   constructor: (@element) ->
     @div =
       textBackground: element.find(".editor-text-background")
@@ -47,7 +49,6 @@ class Editor
     @div.text.blur => @stopCursor()
     @div.text.keydown (event) => @keydown(event)
     @div.text.keypress (event) => @keypress(event)
-    @div.text.click (event) => @moveCursorByMouse(event)
     @div.text.mousedown (event) => @mouseDownEvent(event)
     @div.text.mouseup (event) => @mouseUpEvent(event)
     # start!
@@ -183,6 +184,18 @@ class Editor
     [ x, y ] = @mouseToPosition(event)
     [ @cursorX, @cursorY ] = [ x, y ]
     @setCursor()
+    if @lastMouseUp? and (not event.shiftKey) and Date.now() - @lastMouseUp < @DOUBLE_CLICK_RATE
+      @cancelSelection()
+      @lastMouseUpClicks += 1
+      if @lastMouseUpClicks == 3
+        @selectLine()
+        @lastMouseUpClicks = 1
+      else
+        @selectWord()
+      @lastMouseUp = Date.now()
+      return false
+    @lastMouseUp = Date.now()
+    @lastMouseUpClicks = 1
     if not @selection? then return
     @div.text.unbind("mousemove")
     @div.text.unbind("mouseout")
@@ -223,11 +236,6 @@ class Editor
   autoScroll: (direction) =>
     if direction > 0 then @moveDown() else @moveUp()
     @addSelection(@cursorX, @cursorY)
-
-  moveCursorByMouse: (event) ->
-    [ @cursorX, @cursorY ] = @mouseToPosition(event)
-    @cancelSelection()
-    @setCursor()
 
   moveUp: ->
     if @cursorY > 0 then @cursorY -= 1
@@ -475,6 +483,23 @@ class Editor
     @moveRight()
     @addSelection(@cursorX, @cursorY)
 
+  selectWord: ->
+    x1 = Math.max(0, @cursorX - 1)
+    x2 = x1
+    while x1 > 0 and @lines[@cursorY][x1].match(/\w/)? then x1 -= 1
+    while x2 < @lines[@cursorY].length and x2 > 0 and @lines[@cursorY][x2].match(/\w/)? then x2 += 1
+    if x2 > x1
+      @startSelection(@SELECTION_RIGHT, x1 + 1, @cursorY)
+      @addSelection(x2, @cursorY)
+    else if @lines[@cursorY][x1] != " "
+      @startSelection(@SELECTION_RIGHT, x1, @cursorY)
+      @addSelection(x1 + 1, @cursorY)
+
+  selectLine: ->
+    if @lines[@cursorY].length == 0 then return
+    @startSelection(@SELECTION_RIGHT, 0, @cursorY)
+    @addSelection(@lines[@cursorY].length, @cursorY)
+    
 #exports.Editor = Editor
 
 
