@@ -2,8 +2,12 @@
 #
 # todo:
 # - undo
+# - redo
 # - syntax highlighting
 # - copy / paste
+# - C-y, C-z
+# - undo should combine inserts that happen close together
+# - try using that js key binding library
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
@@ -31,6 +35,7 @@ class Editor
     @lines = []
     @selection = null
     @selectionIndex = 0
+    @undoBuffer = []
     setTimeout((=> @init()), 1)
 
   init: ->
@@ -80,8 +85,9 @@ class Editor
 
   clear: ->
     for line in @div.lines then line.remove()
-    @div.lines = [ ]
-    @lines = [ ]
+    @div.lines = []
+    @lines = []
+    @undoBuffer = []
     @cursorX = 0
     @cursorY = 0
     @fixHeights()
@@ -133,7 +139,9 @@ class Editor
     @div.cursorHighlight.css("top", @cursorY * @lineHeight + 2)
     @div.cursor.css("display", "block")
 
-  setCursor: ->
+  setCursor: (x, y) ->
+    if x? then @cursorX = x
+    if y? then @cursorY = y
     @moveCursor()
     # is the cursor off-screen? :(
     windowTop = @element.scrollTop()
@@ -201,6 +209,8 @@ class Editor
     clearTimeout(@autoScrollTimer)
     @autoScrollTimer = null
     @addSelection(x, y)
+    if @selection? and @selection[0].y == @selection[1].y and @selection[0].x == @selection[1].x
+      @cancelSelection()
     false
 
   mouseMoveEvent: (event) ->
@@ -261,9 +271,46 @@ class Editor
       @cursorX = 0
     @setCursor()
 
+  # ----- operations on the text
+
+  # remove characters from a line
+  deleteText: (x, y, count) ->
+    @lines[y] = @lines[y][0...x] + @lines[y][x + count ...]
+    @refreshLine(y)
+
+  # merge line with the line below it.
+  mergeLines: (y) ->
+    @lines[y] = @lines[y] + @lines[y + 1]
+    @refreshLine(y)
+    @deleteLine(y + 1)
+
+  insertText: (x, y, text) ->
+    @lines[y] = @lines[y][0...x] + text + @lines[y][x...]
+    @refreshLine(y)
+
+  insertLF: (x, y) ->
+    @lines.insert(y + 1, @lines[y][x...])
+    @lines[y] = @lines[y][0...x]
+    div = @newLine(@lines[y + 1])
+    @div.lines.insert(y + 1, div)
+    @div.text.append(div)
+    div.insertAfter(@div.lines[y])
+    @refreshLine(y)
+    @refreshLine(y + 1)
+    @fixHeights()
+
   # ----- key bindings
 
   keydown: (event) ->
+    if event.metaKey and event.which >= 65 and event.which <= 90
+      # command-(x)
+      ch = String.fromCharCode(event.which)
+      switch ch
+        when "Z"
+          @undo()
+          return false
+        else
+          return true
     switch event.which
       when Key.UP
         if event.shiftKey then @selectUp() else @up()
@@ -291,7 +338,7 @@ class Editor
         false
       when Key.SPACE
         # chrome bug.
-        @insert(Key.SPACE)
+        @insertChar(Key.SPACE)
         false
       when Key.ENTER
         @enter()
@@ -333,7 +380,7 @@ class Editor
         false
       else
         if event.which >= 0x20 and event.which <= 0x7e
-          @insert(event.which)
+          @insertChar(event.which)
           false
         true
 
@@ -380,30 +427,28 @@ class Editor
       @deleteSelection()
       return
     if @cursorX < @lines[@cursorY].length
-      @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + @lines[@cursorY][@cursorX + 1 ...]
-      @refreshLine(@cursorY)
+      @addUndo(Undo.INSERT_IN_PLACE, @cursorX, @cursorY, @lines[@cursorY][@cursorX])
+      @deleteText(@cursorX, @cursorY, 1)
     else if @cursorY < @lines.length - 1
-      @lines[@cursorY] = @lines[@cursorY] + @lines[@cursorY + 1]
-      @refreshLine(@cursorY)
-      @deleteLine(@cursorY + 1)
-    false
+      @addUndo(Undo.INSERT_LF_IN_PLACE, @cursorX, @cursorY)
+      @mergeLines(@cursorY)
 
   backspace: ->
     if @selection?
       @deleteSelection()
       return
     if @cursorX > 0
-      @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX - 1] + @lines[@cursorY][@cursorX ...]
-      @refreshLine(@cursorY)
-      @left()
+      @addUndo(Undo.INSERT, @cursorX - 1, @cursorY, @lines[@cursorY][@cursorX - 1])
+      @deleteText(@cursorX - 1, @cursorY, 1)
+      @moveLeft()
     else if @cursorY > 0
-      @cursorX = @lines[@cursorY - 1].length
-      @lines[@cursorY - 1] = @lines[@cursorY - 1] + @lines[@cursorY]
-      @refreshLine(@cursorY - 1)
-      @deleteLine(@cursorY)
-      @up()
+      @setCursor(@lines[@cursorY - 1].length, @cursorY - 1)
+      @addUndo(Undo.INSERT_LF, @cursorX, @cursorY)
+      @mergeLines(@cursorY)
 
   deleteToEol: ->
+    # FIXME: add to clipboard
+    @addUndo(Undo.INSERT_IN_PLACE, @cursorX, @cursorY, @lines[@cursorY][@cursorX ...])
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
     @refreshLine(@cursorY)
 
@@ -411,24 +456,20 @@ class Editor
     topLine = Math.max(@cursorY - Math.floor((@windowLines - 1) / 2), 0)
     @element.scrollTop(topLine * @lineHeight)
 
-  insert: (c) ->
+  insertChar: (c) ->
+    @insert(String.fromCharCode(c))
+
+  insert: (text) ->
     if @selection? then @deleteSelection()
-    @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX] + String.fromCharCode(c) + @lines[@cursorY][@cursorX ...]
-    @refreshLine(@cursorY)
-    @right()
+    @addUndo(Undo.DELETE, @cursorX, @cursorY, text)
+    @insertText(@cursorX, @cursorY, text)
+    @cursorX += text.length
+    @setCursor()
 
   enter: ->
-    @lines.insert(@cursorY + 1, @lines[@cursorY][@cursorX ...])
-    @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
-    div = @newLine(@lines[@cursorY + 1])
-    @div.lines.insert(@cursorY + 1, div)
-    @div.text.append(div)
-    div.insertAfter(@div.lines[@cursorY])
-    @refreshLine(@cursorY)
-    @refreshLine(@cursorY + 1)
-    @down()
-    @cursorX = 0
-    @setCursor()
+    @addUndo(Undo.MERGE, @cursorX, @cursorY)
+    @insertLF(@cursorX, @cursorY)
+    @setCursor(0, @cursorY + 1)
     @fixHeights()
 
   # ----- selection
@@ -472,7 +513,8 @@ class Editor
     [ y0, y1 ] = [ @selection[0].y, @selection[1].y ]
     if y0 == y1
       # within one line
-      @lines[y0] = @lines[y0][0 ... @selection[0].x] + @lines[y0][@selection[1].x ...]
+      @addUndo(Undo.INSERT, @selection[0].x, y0, @lines[y0][@selection[0].x ... @selection[1].x])
+      @deleteText(@selection[0].x, y0, @selection[1].x - @selection[0].x)
     else
       # multi-line
       @lines[y0] = @lines[y0][0 ... @selection[0].x] + @lines[y1][@selection[1].x ...]
@@ -524,6 +566,51 @@ class Editor
     if @lines[@cursorY].length == 0 then return
     @startSelection(@SELECTION_RIGHT, 0, @cursorY)
     @addSelection(@lines[@cursorY].length, @cursorY)
+
+  # ----- undo
+
+  MAX_UNDO: 100
+
+  class Undo
+    @INSERT = 1
+    @INSERT_IN_PLACE = 2
+    @INSERT_LF = 3
+    @INSERT_LF_IN_PLACE = 4
+    @DELETE = 5
+    @MERGE = 6
+    constructor: (@action, @x, @y, @text) ->
+      @when = Date.now()
+
+  addUndo: (action, x, y, text) ->
+    @undoBuffer.push(new Undo(action, x, y, text))
+    while @undoBuffer.length > @MAX_UNDO then @undoBuffer.shift()
+
+  undo: ->
+    item = @undoBuffer.pop()
+    if not item? then return
+    # FIXME: redo?
+    switch item.action
+      when Undo.INSERT
+        @insertText(item.x, item.y, item.text)
+        @setCursor(item.x + item.text.length, item.y)
+      when Undo.INSERT_IN_PLACE
+        @insertText(item.x, item.y, item.text)
+        @setCursor(item.x, item.y)
+      when Undo.INSERT_LF
+        @insertLF(item.x, item.y)
+        @setCursor(0, item.y + 1)
+      when Undo.INSERT_LF_IN_PLACE
+        @insertLF(item.x, item.y)
+        @setCursor(item.x, item.y)
+      when Undo.DELETE
+        @deleteText(item.x, item.y, item.text.length)
+        @setCursor(item.x, item.y)
+      when Undo.MERGE
+        @mergeLines(item.y)
+        @setCursor(item.x, item.y)
+
+
+
 
 #exports.Editor = Editor
 
