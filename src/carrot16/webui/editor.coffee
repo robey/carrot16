@@ -8,6 +8,8 @@
 # - C-y, C-z
 # - undo should combine inserts that happen close together
 # - try using that js key binding library
+# - when going up/down, remember "virtual x" on short lines
+# - shift click select
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
@@ -50,10 +52,40 @@ class Editor
     # hook up keyboard control
     @div.text.focus => @startCursor()
     @div.text.blur => @stopCursor()
-    @div.text.keydown (event) => @keydown(event)
-    @div.text.keypress (event) => @keypress(event)
     @div.text.mousedown (event) => @mouseDownEvent(event)
     @div.text.mouseup (event) => @mouseUpEvent(event)
+    @div.text.keypress (event) =>
+      if event.which >= 0x20 and event.which <= 0x7e then (@insertChar(event.which); false)
+    # new-style key bindings
+    @div.text.bind "keydown", "up", => (@up(); false)
+    @div.text.bind "keydown", "shift+up", => (@moveSelection(@SELECTION_LEFT, => @moveUp()); false)
+    @div.text.bind "keydown", "down", => (@down(); false)
+    @div.text.bind "keydown", "shift+down", => (@moveSelection(@SELECTION_RIGHT, => @moveDown()); false)
+    @div.text.bind "keydown", "left", => (@left(); false)
+    @div.text.bind "keydown", "shift+left", => (@moveSelection(@SELECTION_LEFT, => @moveLeft()); false)
+    @div.text.bind "keydown", "right", => (@right(); false)
+    @div.text.bind "keydown", "shift+right", => (@moveSelection(@SELECTION_RIGHT, => @moveRight()); false)
+    @div.text.bind "keydown", "pageup", => (@pageUp(); false)
+    @div.text.bind "keydown", "shift+pageup", => (@moveSelection(@SELECTION_LEFT, => @movePageUp()); false)
+    @div.text.bind "keydown", "pagedown", => (@pageDown(); false)
+    @div.text.bind "keydown", "shift+pagedown", => (@moveSelection(@SELECTION_RIGHT, => @movePageDown()); false)
+    @div.text.bind "keydown", "backspace", => (@backspace(); false)
+    @div.text.bind "keydown", "del", => (@deleteForward(); false)
+    @div.text.bind "keydown", "space", => (@insertChar(32); false)
+    @div.text.bind "keydown", "return", => (@enter(); false)
+    @div.text.bind "keydown", "meta+z", => (@undo(); false)
+    # hello emacs users!
+    @div.text.bind "keydown", "ctrl+a", => (@home(); false)
+    @div.text.bind "keydown", "ctrl+b", => (@left(); false)
+    @div.text.bind "keydown", "ctrl+d", => (@deleteForward(); false)
+    @div.text.bind "keydown", "ctrl+e", => (@end(); false)
+    @div.text.bind "keydown", "ctrl+f", => (@right(); false)
+    @div.text.bind "keydown", "ctrl+h", => (@backspace(); false)
+    @div.text.bind "keydown", "ctrl+k", => (@deleteToEol(); false)
+    @div.text.bind "keydown", "ctrl+l", => (@centerLine(); false)
+    @div.text.bind "keydown", "ctrl+n", => (@down(); false)
+    @div.text.bind "keydown", "ctrl+p", => (@up(); false)
+    @div.text.bind "keydown", "ctrl+z", => (@undo(); false)
     # start!
     @setCursor()
     @div.text.focus()
@@ -298,91 +330,7 @@ class Editor
     @refreshLine(y)
     @refreshLine(y + 1)
     @fixHeights()
-
-  # ----- key bindings
-
-  keydown: (event) ->
-    if event.metaKey and event.which >= 65 and event.which <= 90
-      # command-(x)
-      ch = String.fromCharCode(event.which)
-      switch ch
-        when "Z"
-          @undo()
-          return false
-        else
-          return true
-    switch event.which
-      when Key.UP
-        if event.shiftKey then @selectUp() else @up()
-        false
-      when Key.DOWN
-        if event.shiftKey then @selectDown() else @down()
-        false
-      when Key.LEFT
-        if event.shiftKey then @selectLeft() else @left()
-        false
-      when Key.RIGHT
-        if event.shiftKey then @selectRight() else @right()
-        false
-      when Key.PAGE_UP
-        @pageUp()
-        false
-      when Key.PAGE_DOWN
-        @pageDown()
-        false
-      when Key.BACKSPACE
-        @backspace()
-        false
-      when Key.DELETE
-        @deleteForward()
-        false
-      when Key.SPACE
-        # chrome bug.
-        @insertChar(Key.SPACE)
-        false
-      when Key.ENTER
-        @enter()
-        false
-      else
-        true
-
-  keypress: (event) ->
-    switch event.which
-      when CTRL_A
-        @home()
-        false
-      when CTRL_B
-        @left()
-        false
-      when CTRL_D
-        @deleteForward()
-        false
-      when CTRL_E
-        @end()
-        false
-      when CTRL_F
-        @right()
-        false
-      when CTRL_H
-        @backspace()
-        false
-      when CTRL_K
-        @deleteToEol()
-        false
-      when CTRL_L
-        @centerLine()
-        false
-      when CTRL_N
-        @down()
-        false
-      when CTRL_P
-        @up()
-        false
-      else
-        if event.which >= 0x20 and event.which <= 0x7e
-          @insertChar(event.which)
-          false
-        true
+    [ 0, y + 1 ]
 
   # ----- actions
 
@@ -610,58 +558,8 @@ class Editor
         @setCursor(item.x, item.y)
 
 
-
-
 #exports.Editor = Editor
 
-
-# lame, but chrome doesn't define these constants.
-Key =
-  BACKSPACE: 8
-  TAB: 9
-  ENTER: 13
-  SHIFT: 16
-  CONTROL: 17
-  OPTION: 18
-  ESCAPE: 27
-  SPACE: 32
-  PAGE_UP: 33
-  PAGE_DOWN: 34
-  END: 35
-  HOME: 36
-  LEFT: 37
-  UP: 38
-  RIGHT: 39
-  DOWN: 40
-  INSERT: 45
-  DELETE: 46
-  F1: 112
-  F2: 113
-  F3: 114
-  F4: 115
-  F5: 116
-  F6: 117
-  F7: 118
-  F8: 119
-  F9: 120
-  F10: 121
-
-CTRL_A = 1
-CTRL_B = 2
-CTRL_C = 3
-CTRL_D = 4
-CTRL_E = 5
-CTRL_F = 6
-CTRL_G = 7
-CTRL_H = 8
-CTRL_I = 9
-CTRL_J = 10
-CTRL_K = 11
-CTRL_L = 12
-CTRL_M = 13
-CTRL_N = 14
-CTRL_O = 15
-CTRL_P = 16
 
 @text = """\
 :start
