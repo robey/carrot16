@@ -1,13 +1,9 @@
 
 #
 # todo:
-# - undo
-# - redo
 # - syntax highlighting
 # - copy / paste
-# - C-y, C-z
-# - undo should combine inserts that happen close together
-# - try using that js key binding library
+# - C-y
 # - when going up/down, remember "virtual x" on short lines
 # - shift click select
 #
@@ -38,6 +34,7 @@ class Editor
     @selection = null
     @selectionIndex = 0
     @undoBuffer = []
+    @redoBuffer = []
     setTimeout((=> @init()), 1)
 
   init: ->
@@ -74,6 +71,7 @@ class Editor
     @div.text.bind "keydown", "space", => (@insertChar(32); false)
     @div.text.bind "keydown", "return", => (@enter(); false)
     @div.text.bind "keydown", "meta+z", => (@undo(); false)
+    @div.text.bind "keydown", "meta+shift+z", => (@redo(); false)
     # hello emacs users!
     @div.text.bind "keydown", "ctrl+a", => (@home(); false)
     @div.text.bind "keydown", "ctrl+b", => (@left(); false)
@@ -86,6 +84,7 @@ class Editor
     @div.text.bind "keydown", "ctrl+n", => (@down(); false)
     @div.text.bind "keydown", "ctrl+p", => (@up(); false)
     @div.text.bind "keydown", "ctrl+z", => (@undo(); false)
+    @div.text.bind "keydown", "ctrl+shift+z", => (@redo(); false)
     # start!
     @setCursor()
     @div.text.focus()
@@ -536,6 +535,7 @@ class Editor
       new Undo(@action, @x, @y, @text + other.text, other.nextX, other.nextY)
 
   addUndo: (action, x, y, text, nextX, nextY) ->
+    @redoBuffer = []
     @undoBuffer.push(new Undo(action, x, y, text, nextX, nextY))
     while @undoBuffer.length > @MAX_UNDO then @undoBuffer.shift()
     # compact?
@@ -553,9 +553,11 @@ class Editor
       @undoBuffer.push(u1.combine(u2))
 
   undo: ->
+    @cancelSelection()
     item = @undoBuffer.pop()
     if not item? then return
     # FIXME: redo?
+    @redoBuffer.push(item)
     switch item.action
       when Undo.INSERT, Undo.INSERT_SELECT
         @insertText(item.x, item.y, item.text)
@@ -569,6 +571,22 @@ class Editor
       when Undo.MERGE
         @mergeLines(item.y)
         @setCursor(item.x, item.y)
+
+  redo: ->
+    @cancelSelection()
+    item = @redoBuffer.pop()
+    if not item? then return
+    @undoBuffer.push(item)
+    switch item.action
+      when Undo.INSERT, Undo.INSERT_SELECT
+        @deleteText(item.x, item.y, item.text.length)
+        @setCursor(item.x, item.y)
+      when Undo.DELETE
+        @insertText(item.x, item.y, item.text)
+        @setCursor(item.nextX, item.nextY)
+      when Undo.MERGE
+        [ x, y ] = @insertLF(item.x, item.y)
+        @setCursor(x, y)
 
 
 #exports.Editor = Editor
