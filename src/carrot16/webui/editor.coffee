@@ -231,8 +231,9 @@ class Editor
         @selectWord()
       @lastMouseUp = Date.now()
       return false
-    @lastMouseUp = Date.now()
-    @lastMouseUpClicks = 1
+    if not event.shiftKey
+      @lastMouseUp = Date.now()
+      @lastMouseUpClicks = 1
     if not @selection? then return
     @div.text.unbind("mousemove")
     @div.text.unbind("mouseout")
@@ -240,7 +241,7 @@ class Editor
     clearTimeout(@autoScrollTimer)
     @autoScrollTimer = null
     @addSelection(x, y)
-    if @selection? and @selection[0].y == @selection[1].y and @selection[0].x == @selection[1].x
+    if (not event.shiftKey) and @selection[0].y == @selection[1].y and @selection[0].x == @selection[1].x
       @cancelSelection()
     false
 
