@@ -303,6 +303,20 @@ class Editor
       @cursorX = 0
     @setCursor()
 
+  movePageUp: ->
+    @cursorY -= @windowLines
+    if @cursorY < 0 then @cursorY = 0
+    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @centerLine()
+    @setCursor()
+
+  movePageDown: ->
+    @cursorY += @windowLines
+    if @cursorY > @lines.length - 1 then @cursorY = @lines.length - 1
+    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @centerLine()
+    @setCursor()
+
   # ----- operations on the text
 
   # remove characters from a line
@@ -316,9 +330,17 @@ class Editor
     @refreshLine(y)
     @deleteLine(y + 1)
 
-  insertText: (x, y, text) ->
+  insertTextSegment: (x, y, text) ->
     @lines[y] = @lines[y][0...x] + text + @lines[y][x...]
     @refreshLine(y)
+    [ x + text.length, y ]
+
+  insertText: (x, y, text) ->
+    lines = text.split("\n")
+    for line in lines[...-1]
+      [ x, y ] = @insertTextSegment(x, y, line)
+      [ x, y ] = @insertLF(x, y)
+    @insertTextSegment(x, y, lines[lines.length - 1])
 
   insertLF: (x, y) ->
     @lines.insert(y + 1, @lines[y][x...])
@@ -359,26 +381,22 @@ class Editor
     @setCursor()
 
   pageUp: ->
-    @cursorY -= @windowLines
-    if @cursorY < 0 then @cursorY = 0
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
-    @setCursor()
+    @cancelSelection()
+    @movePageUp()
 
   pageDown: ->
-    @cursorY += @windowLines
-    if @cursorY > @lines.length - 1 then @cursorY = @lines.length - 1
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
-    @setCursor()
+    @cancelSelection()
+    @movePageDown()
 
   deleteForward: ->
     if @selection?
       @deleteSelection()
       return
     if @cursorX < @lines[@cursorY].length
-      @addUndo(Undo.INSERT_IN_PLACE, @cursorX, @cursorY, @lines[@cursorY][@cursorX])
+      @addUndo(Undo.INSERT, @cursorX, @cursorY, @lines[@cursorY][@cursorX], @cursorX, @cursorY)
       @deleteText(@cursorX, @cursorY, 1)
     else if @cursorY < @lines.length - 1
-      @addUndo(Undo.INSERT_LF_IN_PLACE, @cursorX, @cursorY)
+      @addUndo(Undo.INSERT, @cursorX, @cursorY, "\n", @cursorX, @cursorY)
       @mergeLines(@cursorY)
 
   backspace: ->
@@ -386,17 +404,17 @@ class Editor
       @deleteSelection()
       return
     if @cursorX > 0
-      @addUndo(Undo.INSERT, @cursorX - 1, @cursorY, @lines[@cursorY][@cursorX - 1])
+      @addUndo(Undo.INSERT, @cursorX - 1, @cursorY, @lines[@cursorY][@cursorX - 1], @cursorX, @cursorY)
       @deleteText(@cursorX - 1, @cursorY, 1)
       @moveLeft()
     else if @cursorY > 0
       @setCursor(@lines[@cursorY - 1].length, @cursorY - 1)
-      @addUndo(Undo.INSERT_LF, @cursorX, @cursorY)
+      @addUndo(Undo.INSERT, @cursorX, @cursorY, "\n", 0, @cursorY + 1)
       @mergeLines(@cursorY)
 
   deleteToEol: ->
     # FIXME: add to clipboard
-    @addUndo(Undo.INSERT_IN_PLACE, @cursorX, @cursorY, @lines[@cursorY][@cursorX ...])
+    @addUndo(Undo.INSERT, @cursorX, @cursorY, @lines[@cursorY][@cursorX ...], @cursorX, @cursorY)
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
     @refreshLine(@cursorY)
 
@@ -409,16 +427,14 @@ class Editor
 
   insert: (text) ->
     if @selection? then @deleteSelection()
-    @addUndo(Undo.DELETE, @cursorX, @cursorY, text)
-    @insertText(@cursorX, @cursorY, text)
-    @cursorX += text.length
-    @setCursor()
+    [ x, y ] = @insertText(@cursorX, @cursorY, text)
+    @addUndo(Undo.DELETE, @cursorX, @cursorY, text, x, y)
+    @setCursor(x, y)
 
   enter: ->
     @addUndo(Undo.MERGE, @cursorX, @cursorY)
-    @insertLF(@cursorX, @cursorY)
-    @setCursor(0, @cursorY + 1)
-    @fixHeights()
+    [ x, y ] = @insertLF(@cursorX, @cursorY)
+    @setCursor(x, y)
 
   # ----- selection
 
@@ -458,44 +474,24 @@ class Editor
     for n in [Math.min(@selection[0].y, oldy) .. Math.max(@selection[1].y, oldy)] then @refreshLine(n)
 
   deleteSelection: ->
-    [ y0, y1 ] = [ @selection[0].y, @selection[1].y ]
+    [ x0, y0, x1, y1 ] = [ @selection[0].x, @selection[0].y, @selection[1].x, @selection[1].y ]
     if y0 == y1
       # within one line
-      @addUndo(Undo.INSERT, @selection[0].x, y0, @lines[y0][@selection[0].x ... @selection[1].x])
-      @deleteText(@selection[0].x, y0, @selection[1].x - @selection[0].x)
+      @addUndo(Undo.INSERT_SELECT, x0, y0, @lines[y0][x0...x1], x1, y0)
+      @deleteText(x0, y0, x1 - x0)
     else
       # multi-line
+      buffer = [ @lines[y0][x0...] ].concat (for y in [y0 + 1 ... y1] then @lines[y]), [ @lines[y1][...x1] ]
+      @addUndo(Undo.INSERT_SELECT, x0, y0, buffer.join("\n"), x1, y1)
       @lines[y0] = @lines[y0][0 ... @selection[0].x] + @lines[y1][@selection[1].x ...]
       for y in [y0 + 1 .. y1] then @deleteLine(y0 + 1)
-    @cursorX = @selection[0].x
-    @cursorY = y0
+    @setCursor(x0, y0)
     @selection = null
     @refreshLine(y0)
-    @setCursor()
-    if @lines[y0].length == 0 and y0 > 0
-      # just delete the whole line
-      @cursorX = @lines[y0 - 1].length
-      @deleteLine(y0)
-      @moveUp()
 
-  selectUp: ->
-    @startSelection(@SELECTION_LEFT, @cursorX, @cursorY)
-    @moveUp()
-    @addSelection(@cursorX, @cursorY)
-
-  selectDown: ->
-    @startSelection(@SELECTION_RIGHT, @cursorX, @cursorY)
-    @moveDown()
-    @addSelection(@cursorX, @cursorY)
-
-  selectLeft: ->
-    @startSelection(@SELECTION_LEFT, @cursorX, @cursorY)
-    @moveLeft()
-    @addSelection(@cursorX, @cursorY)
-
-  selectRight: ->
-    @startSelection(@SELECTION_RIGHT, @cursorX, @cursorY)
-    @moveRight()
+  moveSelection: (direction, movement) ->
+    @startSelection(direction, @cursorX, @cursorY)
+    movement()
     @addSelection(@cursorX, @cursorY)
 
   selectWord: ->
@@ -506,50 +502,67 @@ class Editor
     if x2 > x1
       @startSelection(@SELECTION_RIGHT, x1 + 1, @cursorY)
       @addSelection(x2, @cursorY)
+      @setCursor(x2, @cursorY)
     else if @lines[@cursorY][x1] != " "
       @startSelection(@SELECTION_RIGHT, x1, @cursorY)
       @addSelection(x1 + 1, @cursorY)
+      @setCursor(x1 + 1, @cursorY)
 
   selectLine: ->
     if @lines[@cursorY].length == 0 then return
     @startSelection(@SELECTION_RIGHT, 0, @cursorY)
-    @addSelection(@lines[@cursorY].length, @cursorY)
+    if @cursorY + 1 < @lines.length
+      @addSelection(0, @cursorY + 1)
+      @setCursor(0, @cursorY + 1)
+    else
+      @addSelection(@lines[@cursorY].length, @cursorY)
+      @setCursor(@lines[@cursorY].length, @cursorY)
 
   # ----- undo
 
   MAX_UNDO: 100
+  UNDO_COMPACTION_RATE: 1000
 
   class Undo
     @INSERT = 1
-    @INSERT_IN_PLACE = 2
-    @INSERT_LF = 3
-    @INSERT_LF_IN_PLACE = 4
-    @DELETE = 5
-    @MERGE = 6
-    constructor: (@action, @x, @y, @text) ->
+    @INSERT_SELECT = 2
+    @DELETE = 3
+    @MERGE = 4 # FIXME
+
+    constructor: (@action, @x, @y, @text, @nextX, @nextY) ->
       @when = Date.now()
 
-  addUndo: (action, x, y, text) ->
-    @undoBuffer.push(new Undo(action, x, y, text))
+    combine: (other) ->
+      new Undo(@action, @x, @y, @text + other.text, other.nextX, other.nextY)
+
+  addUndo: (action, x, y, text, nextX, nextY) ->
+    @undoBuffer.push(new Undo(action, x, y, text, nextX, nextY))
     while @undoBuffer.length > @MAX_UNDO then @undoBuffer.shift()
+    # compact?
+    if @undoBuffer.length < 2 then return
+    u2 = @undoBuffer[@undoBuffer.length - 2]
+    u1 = @undoBuffer[@undoBuffer.length - 1]
+    if u1.action != u2.action or u1.when - u2.when >= @UNDO_COMPACTION_RATE then return
+    if u1.action == Undo.DELETE and u1.x == u2.nextX and u1.y == u2.nextY
+      @undoBuffer.pop()
+      @undoBuffer.pop()
+      @undoBuffer.push(u2.combine(u1))
+    else if u1.action == Undo.INSERT and u1.nextX == u2.x and u1.nextY == u2.y
+      @undoBuffer.pop()
+      @undoBuffer.pop()
+      @undoBuffer.push(u1.combine(u2))
 
   undo: ->
     item = @undoBuffer.pop()
     if not item? then return
     # FIXME: redo?
     switch item.action
-      when Undo.INSERT
+      when Undo.INSERT, Undo.INSERT_SELECT
         @insertText(item.x, item.y, item.text)
-        @setCursor(item.x + item.text.length, item.y)
-      when Undo.INSERT_IN_PLACE
-        @insertText(item.x, item.y, item.text)
-        @setCursor(item.x, item.y)
-      when Undo.INSERT_LF
-        @insertLF(item.x, item.y)
-        @setCursor(0, item.y + 1)
-      when Undo.INSERT_LF_IN_PLACE
-        @insertLF(item.x, item.y)
-        @setCursor(item.x, item.y)
+        @setCursor(item.nextX, item.nextY)
+        if item.action == Undo.INSERT_SELECT
+          @startSelection(@SELECTION_RIGHT, item.x, item.y)
+          @addSelection(item.nextX, item.nextY)
       when Undo.DELETE
         @deleteText(item.x, item.y, item.text.length)
         @setCursor(item.x, item.y)
