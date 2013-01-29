@@ -176,6 +176,22 @@ class Editor
     div.remove()
     @fixHeights()
 
+  getLineNumberDiv: (n) ->
+    @div.lineNumbers[n]
+
+  onLineNumberClick: (n, f) ->
+    @div.lineNumbers[n]?.click(f)
+    @div.lineNumbers[n]?.css("cursor", "pointer")
+
+  setLineNumberMarked: (n, marked) ->
+    if marked
+      @div.lineNumbers[n]?.addClass("editor-linenumber-marked")
+    else
+      @div.lineNumbers[n]?.removeClass("editor-linenumber-marked")
+
+  clearLineNumberMarks: ->
+    for i in [0 ... @div.lineNumbers.length] then @setLineNumberMarked(i, false)
+
   # ----- cursor
 
   moveCursor: (x, y) ->

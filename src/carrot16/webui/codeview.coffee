@@ -106,21 +106,12 @@ class CodeView
   # rebuild line number column, and resize textarea if necessary.
   update: ->
     lines = @getCode()
-    @linenums.empty()
     for i in [0 ... lines.length]
-      span = $("<span />")
-      span.text(i + 1)
-      span.addClass("linenum")
-      span.attr("id", "line#{i}-#{@name}")
       do (i) =>
-        span.click => @toggleBreakpoint(i)
-      @linenums.append(span)
-    @textarea.css("height", @linenums.css("height"))
+        @editor.onLineNumberClick i, => @toggleBreakpoint(i)
     @resize()
 
   resize: ->
-    # compensate for extra ceremonial baggage chrome puts around a textarea.
-    @textarea.outerWidth(@codebox.width())
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
     @updatePcHighlight()
 
@@ -153,12 +144,8 @@ class CodeView
 
   setBreakpoint: (linenum, isSet) ->
     if not @assembled?.lineToMem(linenum)? then isSet = false
-    line = $("#line#{linenum}-#{@name}")
     @breakpoints[linenum] = isSet
-    if isSet
-      line.addClass("breakpoint")
-    else
-      line.removeClass("breakpoint")
+    @editor.setLineNumberMarked(linenum, isSet)
 
   toggleBreakpoint: (linenum) ->
     @setBreakpoint(linenum, not @breakpoints[linenum])
