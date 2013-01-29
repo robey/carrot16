@@ -2,7 +2,6 @@
 #
 # todo:
 # - syntax highlighting
-# - when going up/down, remember "virtual x" on short lines
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
@@ -82,7 +81,6 @@ class Editor
     @div.text.bind "copy", (e) => @copySelection(e.originalEvent.clipboardData)
     @div.text.bind "cut", (e) => @cutSelection(e.originalEvent.clipboardData)
     @div.text.bind "paste", (e) => @paste(e.originalEvent.clipboardData)
-
     # start!
     @replaceText("")
     @div.text.focus()
@@ -122,6 +120,7 @@ class Editor
     @selectionIndex = 0
     @cursorX = 0
     @cursorY = 0
+    @virtualX = 0
     @fixHeights()
 
   replaceText: (text) ->
@@ -230,8 +229,8 @@ class Editor
   mouseUpEvent: (event) ->
     @div.text.focus()
     [ x, y ] = @mouseToPosition(event)
-    [ @cursorX, @cursorY ] = [ x, y ]
-    @setCursor()
+    @setCursor(x, y)
+    @virtualX = 0
     if @lastMouseUp? and (not event.shiftKey) and Date.now() - @lastMouseUp < @DOUBLE_CLICK_RATE
       @cancelSelection()
       @lastMouseUpClicks += 1
@@ -258,7 +257,7 @@ class Editor
 
   mouseMoveEvent: (event) ->
     [ x, y ] = @mouseToPosition(event)
-    [ @cursorX, @cursorY ] = [ x, y ]
+    @setCursor(x, y)
     if @selection? then @addSelection(x, y)
     @moveCursor()
 
@@ -266,8 +265,7 @@ class Editor
     # weird chrome bug makes it send us a blur for moving between lines.
     if event.toElement.parentElement is @div.text[0] then return
     [ x, y ] = @mouseToPosition(event)
-    [ @cursorX, @cursorY ] = [ x, y ]
-    @setCursor()
+    @setCursor(x, y)
     @addSelection(x, y)
     # okay, so we want to slowly scroll the text area to let the user keep selecting.
     if @autoScrollTimer? then return
@@ -288,14 +286,19 @@ class Editor
     if direction > 0 then @moveDown() else @moveUp()
     @addSelection(@cursorX, @cursorY)
 
+  adjustX: ->
+    if @virtualX > @cursorX then @cursorX = @virtualX
+    if @cursorX > @lines[@cursorY].length then [ @virtualX, @cursorX ] = [ @cursorX, @lines[@cursorY].length ]
+    if @virtualX <= @cursorX then @virtualX = 0
+
   moveUp: ->
     if @cursorY > 0 then @cursorY -= 1
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @adjustX()
     @setCursor()
 
   moveDown: ->
     if @cursorY < @lines.length - 1 then @cursorY += 1
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @adjustX()
     @setCursor()
 
   moveLeft: ->
@@ -304,6 +307,7 @@ class Editor
     else if @cursorY > 0
       @cursorY -= 1
       @cursorX = @lines[@cursorY].length
+    @virtualX = 0
     @setCursor()
 
   moveRight: ->
@@ -312,19 +316,20 @@ class Editor
     else if @cursorY < @lines.length - 1
       @cursorY += 1
       @cursorX = 0
+    @virtualX = 0
     @setCursor()
 
   movePageUp: ->
     @cursorY -= @windowLines
     if @cursorY < 0 then @cursorY = 0
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @adjustX()
     @centerLine()
     @setCursor()
 
   movePageDown: ->
     @cursorY += @windowLines
     if @cursorY > @lines.length - 1 then @cursorY = @lines.length - 1
-    if @cursorX > @lines[@cursorY].length then @cursorX = @lines[@cursorY].length
+    @adjustX()
     @centerLine()
     @setCursor()
 
@@ -390,10 +395,12 @@ class Editor
 
   home: ->
     @cursorX = 0
+    @virtualX = 0
     @setCursor()
 
   end: ->
     @cursorX = @lines[@cursorY].length
+    @virtualX = 0
     @setCursor()
 
   pageUp: ->
@@ -405,6 +412,7 @@ class Editor
     @movePageDown()
 
   deleteForward: ->
+    @virtualX = 0
     if @selection?
       @deleteSelection()
       return
@@ -416,6 +424,7 @@ class Editor
       @mergeLines(@cursorY)
 
   backspace: ->
+    @virtualX = 0
     if @selection?
       @deleteSelection()
       return
@@ -430,6 +439,7 @@ class Editor
 
   deleteToEol: ->
     # would be nice to add this to the clipboard, emacs style, but javascript can't access the clipboard on the fly.
+    @virtualX = 0
     @addUndo(Undo.INSERT, @cursorX, @cursorY, @lines[@cursorY][@cursorX ...], @cursorX, @cursorY)
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
     @refreshLine(@cursorY)
@@ -443,11 +453,13 @@ class Editor
 
   insert: (text) ->
     if @selection? then @deleteSelection()
+    @virtualX = 0
     [ x, y ] = @insertText(@cursorX, @cursorY, text)
     @addUndo(Undo.DELETE, @cursorX, @cursorY, text, x, y)
     @setCursor(x, y)
 
   enter: ->
+    @virtualX = 0
     @addUndo(Undo.MERGE, @cursorX, @cursorY)
     [ x, y ] = @insertLF(@cursorX, @cursorY)
     @setCursor(x, y)
@@ -593,6 +605,7 @@ class Editor
       @undoBuffer.push(u1.combine(u2))
 
   undo: ->
+    @virtualX = 0
     @cancelSelection()
     item = @undoBuffer.pop()
     if not item? then return
@@ -612,6 +625,7 @@ class Editor
         @setCursor(item.x, item.y)
 
   redo: ->
+    @virtualX = 0
     @cancelSelection()
     item = @redoBuffer.pop()
     if not item? then return
