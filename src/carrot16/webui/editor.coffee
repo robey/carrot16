@@ -2,8 +2,6 @@
 #
 # todo:
 # - syntax highlighting
-# - copy / paste
-# - C-y
 # - when going up/down, remember "virtual x" on short lines
 #
 
@@ -333,17 +331,14 @@ class Editor
   # ----- operations on the text
 
   deleteText: (x, y, count) ->
-    n = @lines[y][x ... x + count].length
-    @lines[y] = @lines[y][0...x] + @lines[y][x + count ...]
-    @refreshLine(y)
-    count -= n
-    while count > 0 and y + 1 < @lines.length
-      if @lines[y + 1].length <= count
-        count -= @lines[y + 1].length
-        @deleteLine(y + 1)
-      else
-        @lines[y + 1] = @lines[y + 1][count...]
-        count = 0
+    while count > 0 and y < @lines.length
+      n = @lines[y][x ... x + count].length
+      @lines[y] = @lines[y][0...x] + @lines[y][x + count ...]
+      @refreshLine(y)
+      count -= n
+      if count > 0
+        @mergeLines(y)
+        count -= 1
 
   # merge line with the line below it.
   mergeLines: (y) ->
@@ -434,7 +429,7 @@ class Editor
       @mergeLines(@cursorY)
 
   deleteToEol: ->
-    # FIXME: add to clipboard
+    # would be nice to add this to the clipboard, emacs style, but javascript can't access the clipboard on the fly.
     @addUndo(Undo.INSERT, @cursorX, @cursorY, @lines[@cursorY][@cursorX ...], @cursorX, @cursorY)
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
     @refreshLine(@cursorY)
@@ -560,7 +555,7 @@ class Editor
   selectAll: ->
     @startSelection(@SELECTION_RIGHT, 0, 0)
     @addSelection(@lines[@lines.length - 1].length, @lines.length - 1)
-    
+
 
   # ----- undo
 
