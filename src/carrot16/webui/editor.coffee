@@ -13,7 +13,7 @@ class Editor
   # rate at which scrolling should happen when the mouse button is held past the edge of the editor (msec)
   AUTO_SCROLL_RATE: 100
 
-  DOUBLE_CLICK_RATE: 200
+  DOUBLE_CLICK_RATE: 250
 
   constructor: (@element) ->
     @div =
@@ -25,14 +25,14 @@ class Editor
       lines: []
       listing: element.find(".editor-listing")
       cursor: element.find(".editor-cursor")
-      cursorHighlight: element.find(".editor-cursor-highlight")
+      cursorHighlight: element.find(".editor-highlight-line-cursor")
+    @replaceText("")
     setTimeout((=> @init()), 1)
 
   init: ->
     @calculateEm()
     @lineHeight = parseInt(@element.css("line-height"))
     @windowLines = Math.floor(@element.height() / @lineHeight)
-    @clear()
     # force line numbers to be 5-em wide.
     @div.gutter.css("width", 5 * @em + 20)
     # force listing to be 20-em wide.
@@ -82,15 +82,17 @@ class Editor
     @div.text.bind "cut", (e) => @cutSelection(e.originalEvent.clipboardData)
     @div.text.bind "paste", (e) => @paste(e.originalEvent.clipboardData)
     # start!
-    @replaceText("")
+    @inited = true
+    @fixHeights()
     @div.text.focus()
 
   # fix the heights of various elements to match the current text size
   fixHeights: ->
+    if not @inited then return
     # make background size match editor
     @div.textBackground.css("width", @div.text.width())
-    @div.textBackground.css("height", @div.text.height())# - @div.text.position().top)
-    @div.textBackground.css("top", 2)
+    @div.textBackground.css("height", @div.text.innerHeight())# - @div.text.position().top)
+    @div.textBackground.css("top", 0)
     @div.textBackground.css("left", @div.text.position().left)
     # line numbers!
     if @div.lineNumbers.length < @lines.length
@@ -125,6 +127,7 @@ class Editor
 
   replaceText: (text) ->
     @clear()
+    if text[-1] != "\n" then text = text + "\n"
     for line in text.split("\n")
       @lines.push line
       div = @newLine(line)
@@ -139,6 +142,9 @@ class Editor
     range.setStart(@div.lines[0][0], 0)
     range.setEnd(@div.lines[0][0], 0)
     selection.addRange(range)
+
+  putDivOnLine: (div, y) ->
+    div.css("top", y * @lineHeight)
 
   # ----- line manipulation
 
@@ -172,16 +178,16 @@ class Editor
 
   # ----- cursor
 
-  moveCursor: ->
+  moveCursor: (x, y) ->
+    if x? then @cursorX = x
+    if y? then @cursorY = y
     @div.cursor.css("top", @cursorY * @lineHeight + 1)
-    @div.cursor.css("left", @cursorX * @em - 1 + 3)
-    @div.cursorHighlight.css("top", @cursorY * @lineHeight + 2)
+    @div.cursor.css("left", @cursorX * @em - 1 + 5)
+    @putDivOnLine(@div.cursorHighlight, @cursorY)
     @div.cursor.css("display", "block")
 
   setCursor: (x, y) ->
-    if x? then @cursorX = x
-    if y? then @cursorY = y
-    @moveCursor()
+    @moveCursor(x, y)
     # is the cursor off-screen? :(
     windowTop = @element.scrollTop()
     windowBottom = windowTop + @element.height()
@@ -199,7 +205,7 @@ class Editor
   startCursor: ->
     @stopCursor()
     @cursorTimer = setInterval((=> @blinkCursor()), @CURSOR_RATE)
-    @setCursor()
+    @moveCursor()
 
   blinkCursor: ->
     @div.cursor.css("display", if @div.cursor.css("display") == "none" then "block" else "none")
@@ -257,9 +263,8 @@ class Editor
 
   mouseMoveEvent: (event) ->
     [ x, y ] = @mouseToPosition(event)
-    @setCursor(x, y)
     if @selection? then @addSelection(x, y)
-    @moveCursor()
+    @moveCursor(x, y)
 
   mouseOutEvent: (event) =>
     # weird chrome bug makes it send us a blur for moving between lines.
@@ -642,7 +647,7 @@ class Editor
         @setCursor(x, y)
 
 
-#exports.Editor = Editor
+exports.Editor = Editor
 
 
 @text = """\
@@ -661,7 +666,7 @@ class Editor
   h
 """
 
-$(document).ready =>
-  @editor = new Editor($("#editor"))
-  setTimeout((=> @editor.replaceText(@text)), 100)
+# $(document).ready =>
+#   @editor = new Editor($("#editor"))
+#   setTimeout((=> @editor.replaceText(@text)), 100)
 
