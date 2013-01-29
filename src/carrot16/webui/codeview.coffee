@@ -19,10 +19,9 @@ class CodeView
     $("#left_panel").append(@pane)
     webui.Tabs.connect @tab, @pane
     CodeViewSet.add(@)
-    @textarea = $("##{@name} .code-textarea")
-    @textarea.bind "input", => @codeEdited()
-    @textarea.bind "change", => @codeChanged()
-    @linenums = $("##{@name} .code-linenums")
+    @editor = new webui.Editor($("##{@name} .editor"))
+#    @textarea.bind "input", => @codeEdited()
+#    @textarea.bind "change", => @codeChanged()
     @codebox = $("##{@name} .code-box")
     @pcline = $("##{@name} .code-pc-line")
     @addrDiv = $("##{@name} .code-addr")
@@ -105,10 +104,8 @@ class CodeView
 
   # rebuild line number column, and resize textarea if necessary.
   update: ->
-    lines = @getCode()
-    for i in [0 ... lines.length]
-      do (i) =>
-        @editor.onLineNumberClick i, => @toggleBreakpoint(i)
+    @editor.foreachLine (i, text) =>
+      @editor.onLineNumberClick i, => @toggleBreakpoint(i)
     @resize()
 
   resize: ->
@@ -118,8 +115,8 @@ class CodeView
   updatePcHighlight: (alsoScroll) ->
     n = @assembled?.memToLine(emulator.registers.PC)
     if n?
-      @pcline.css("top", (n * @pcline.height()) + 5)
       @pcline.css("display", "block")
+      @editor.moveDivToLine(@pcline, n)
       if alsoScroll
         if not @visible() then @activate()
         @scrollToLine(n)
@@ -128,18 +125,11 @@ class CodeView
 
   scrollToLine: (n) ->
     if not @visible() then return
-    line = $("#line#{n}-#{@name}")
-    if not line?.offset()? then return
-    lineTop = line.offset().top
-    lineHeight = parseInt(@pane.css("line-height"))
-    top = @pane.position().top
-    bottom = Math.min(top + @pane.height(), webui.LogPane.top())
-    visibleLines = Math.floor((bottom - top) / lineHeight)
-    if lineTop < top + lineHeight or lineTop > bottom - (3 * lineHeight)
-      @pane.scrollTop(if n < 2 then 0 else (n - 2) * lineHeight)
+    @editor.scrollToLine(n)
 
   clearBreakpoints: ->
     @breakpoints = {}
+    @editor.clearLineNumberMarks()
     @update()
 
   setBreakpoint: (linenum, isSet) ->
@@ -163,10 +153,11 @@ class CodeView
     line.append(linenum)
     line.append(": #{message}")
     webui.LogPane.log(line)
-    $("#line#{n}-#{@name}").css("background-color", "#f88")
+    @editor.setLineNumberError(n)
 
   assemble: ->
     @debug "start assembly of #{@getName()}"
+    @editor.clearLineNumberErrors()
     startTime = Date.now()
     logger = (n, pos, message) => @logError(n, message)
     asm = new d16bunny.Assembler(logger)

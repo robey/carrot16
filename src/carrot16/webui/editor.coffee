@@ -112,6 +112,8 @@ class Editor
     @em = span.outerWidth(true)
     span.remove()
 
+  # ----- external convenience API
+  
   clear: ->
     for line in @div.lines then line.remove()
     @div.lines = []
@@ -143,9 +145,36 @@ class Editor
     range.setEnd(@div.lines[0][0], 0)
     selection.addRange(range)
 
-  putDivOnLine: (div, y) ->
+  getLineNumberDiv: (n) ->
+    @div.lineNumbers[n]
+
+  onLineNumberClick: (n, f) ->
+    @div.lineNumbers[n]?.click(f)
+    @div.lineNumbers[n]?.css("cursor", "pointer")
+
+  setLineNumberMarked: (n, marked) ->
+    if marked
+      @div.lineNumbers[n]?.addClass("editor-linenumber-marked")
+    else
+      @div.lineNumbers[n]?.removeClass("editor-linenumber-marked")
+
+  setLineNumberError: (n) ->
+    @div.lineNumbers[n]?.removeClass("editor-linenumber-marked")
+    @div.lineNumbers[n]?.addClass("editor-linenumber-error")
+
+  clearLineNumberMarks: ->
+    for div in @div.lineNumbers then div.removeClass("editor-linenumber-marked")
+
+  clearLineNumberErrors: ->
+    for div in @div.lineNumbers then div.removeClass("editor-linenumber-error")
+
+  moveDivToLine: (div, y) ->
     div.css("top", y * @lineHeight)
 
+  # callback(line#, text)
+  foreachLine: (f) ->
+    for i in [0 ... @lines.length] then f(i, @lines[i])
+      
   # ----- line manipulation
 
   # factor out the code to make new div lines
@@ -176,22 +205,6 @@ class Editor
     div.remove()
     @fixHeights()
 
-  getLineNumberDiv: (n) ->
-    @div.lineNumbers[n]
-
-  onLineNumberClick: (n, f) ->
-    @div.lineNumbers[n]?.click(f)
-    @div.lineNumbers[n]?.css("cursor", "pointer")
-
-  setLineNumberMarked: (n, marked) ->
-    if marked
-      @div.lineNumbers[n]?.addClass("editor-linenumber-marked")
-    else
-      @div.lineNumbers[n]?.removeClass("editor-linenumber-marked")
-
-  clearLineNumberMarks: ->
-    for i in [0 ... @div.lineNumbers.length] then @setLineNumberMarked(i, false)
-
   # ----- cursor
 
   moveCursor: (x, y) ->
@@ -199,20 +212,22 @@ class Editor
     if y? then @cursorY = y
     @div.cursor.css("top", @cursorY * @lineHeight + 1)
     @div.cursor.css("left", @cursorX * @em - 1 + 5)
-    @putDivOnLine(@div.cursorHighlight, @cursorY)
+    @moveDivToLine(@div.cursorHighlight, @cursorY)
     @div.cursor.css("display", "block")
+
+  scrollToLine: (y) ->
+    windowTop = @element.scrollTop()
+    windowBottom = windowTop + @element.height()
+    lineTop = y * @lineHeight
+    lineBottom = lineTop + @lineHeight
+    if lineTop < windowTop
+      @element.scrollTop(Math.max(0, lineTop - @lineHeight))
+    else if lineBottom > windowBottom
+      @element.scrollTop(lineTop - @lineHeight * (@windowLines - 1))
 
   setCursor: (x, y) ->
     @moveCursor(x, y)
-    # is the cursor off-screen? :(
-    windowTop = @element.scrollTop()
-    windowBottom = windowTop + @element.height()
-    cursorTop = @cursorY * @lineHeight
-    cursorBottom = cursorTop + @lineHeight
-    if cursorTop < windowTop
-      @element.scrollTop(Math.max(0, cursorTop - @lineHeight))
-    else if cursorBottom > windowBottom
-      @element.scrollTop(cursorTop - @lineHeight * (@windowLines - 1))
+    @scrollToLine(y)
 
   stopCursor: ->
     if @cursorTimer? then clearInterval(@cursorTimer)

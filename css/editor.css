@@ -32,11 +32,16 @@
 }
 
 .editor-linenumber-marked {
-  background-color: #faa;
-  border: 1px solid #faa;
-  /* border-radius: 10px 0px 0px 10px; */
+  background-color: #666;
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 10px 0px 0px 10px;
   line-height: 18px;
   padding-right: 9px !important;
+}
+
+.editor-linenumber-error {
+  background-color: #f00;
 }
 
 .editor-side-padding {

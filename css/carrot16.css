@@ -85,26 +85,9 @@ a {
   overflow-y: scroll;
 }
 
-.linenums {
-  padding-left: 0px;
-  padding-top: 5px;
-  display: block;
-  text-align: right;
-  color: gray;
-  width: 4em !important;
-}
-.linenums .breakpoint {
-  background-color: #adf;
-  border: 1px solid #3ab;
-  border-radius: 3px;
-  padding-top: 0px;
-  padding-bottom: 0px;
-  padding-right: 4px;
-}
-
 .code-pc-line {
   background-color: #afa;
-  display: none;
+  z-index: -2;
 }
 
 /* ----- memory view ----- */
