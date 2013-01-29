@@ -20,36 +20,12 @@ class CodeView
     webui.Tabs.connect @tab, @pane
     CodeViewSet.add(@)
     @editor = new webui.Editor($("##{@name} .editor"))
+    @editor.updateCallback = (=> @codeChanged())
     @div =
       listing: $("##{@name} .editor-listing")
-#    @textarea.bind "input", => @codeEdited()
-#    @textarea.bind "change", => @codeChanged()
-    @codebox = $("##{@name} .code-box")
-    @pcline = $("##{@name} .code-pc-line")
-    @addrDiv = $("##{@name} .code-addr")
-    @dumpDiv = $("##{@name} .code-dump")
+      pcline: $("##{@name} .code-pc-line")
     @assembled = null
     @breakpoints = {}
-    @pane.data "keydown", (key) =>
-      if key == Key.ENTER
-        # many things about javascript and html/css are confounding to me,
-        # but this one is the *most* confounding to me. we want to start the
-        # assembler "as soon as" the user hits enter, so that the editor
-        # seems fairly responsive. but we want chrome to update the UI (the
-        # bits on the screen) so that the user sees the effect of hitting
-        # enter.
-        #
-        # chrome will not update the screen unless we delay by some amount
-        # of time. my testing showed that 0ms is not enough, and chrome will
-        # refuse to update the screen unless we wait at least 10ms, sometimes
-        # even 15ms. i have no idea why. i would love to know! please write
-        # me and tell me why!
-        #
-        # in the meantime, i'm hoping that 50ms is sufficient for chrome to
-        # always be satisfied that it's okay to update the screen, but fast
-        # enough that the user perceives the assembler as starting up
-        # "immediately".
-        setTimeout((=> @codeChanged()), 50)
 
   setName: (name) ->
     $("##{@tabName} a").text(name)
@@ -95,14 +71,8 @@ class CodeView
   visible: -> @pane.css("display") != "none"
 
   codeChanged: ->
-    if @typingTimer? then clearTimeout(@typingTimer)
-    @typingTimer = null
     @update()
     CodeViewSet.assemble()
-
-  codeEdited: ->
-    if @typingTimer? then clearTimeout(@typingTimer)
-    @typingTimer = setTimeout((=> @codeChanged()), @typingDelay)
 
   # rebuild line number column, and resize textarea if necessary.
   update: ->
@@ -112,19 +82,19 @@ class CodeView
 
   resize: ->
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
-    @editor.fixHeights()
+    @editor.setCursor()
     @updatePcHighlight()
 
   updatePcHighlight: (alsoScroll) ->
     n = @assembled?.memToLine(emulator.registers.PC)
     if n?
-      @pcline.css("display", "block")
-      @editor.moveDivToLine(@pcline, n)
+      @div.pcline.css("display", "block")
+      @editor.moveDivToLine(@div.pcline, n)
       if alsoScroll
         if not @visible() then @activate()
         @scrollToLine(n)
     else
-      @pcline.css("display", "none")
+      @div.pcline.css("display", "none")
 
   scrollToLine: (n) ->
     if not @visible() then return
@@ -149,8 +119,9 @@ class CodeView
   highlightError: (y, x) ->
     @scrollToLine(y)
     line = @editor.getLine(y)
-    [ x0, x1 ] = [ x, x + 1 ]
+    [ x0, x1 ] = [ x, x ]
     while x1 < line.length and line[x1].match(/\w/)? then x1 += 1
+    if x1 == x0 then x1 += 1
     @editor.setSelection(x0, y, x1, y)
     @editor.focus()
 
@@ -175,17 +146,16 @@ class CodeView
     @assembled = asm.compile(@getCode())
     if @assembled.errorCount > 0
       @assembled = null
-      @buildDump()
-      return false
-    # kinda cheat by poking directly into memory.
-    @assembled.createImage(emulator.memory.memory)
-    # turn off breakpoints that aren't code anymore.
-    for line, isSet of @breakpoints #when isSet
-      @setBreakpoint(line, isSet)
+    else
+      # kinda cheat by poking directly into memory.
+      @assembled.createImage(emulator.memory.memory)
+      # turn off breakpoints that aren't code anymore.
+      for line, isSet of @breakpoints #when isSet
+        @setBreakpoint(line, isSet)
     @debug "finished assembly of #{@getName()} in #{Date.now() - startTime} msec"
     @buildDump()
     @debug "finished assembly & dump of #{@getName()} in #{Date.now() - startTime} msec"
-    true
+    @assembled?
 
   # build up the dump panel (lines of "offset: words...")
   # FIXME: profiling reveals that this takes way longer than actually assembling. :(
@@ -214,9 +184,7 @@ class CodeView
         div.append((for x in info.data then sprintf("%04x", x)).join(" "))
       outer.append(div)
     x4 = Date.now()
-    @editor.fixHeights()
-    x5 = Date.now()
-    console.log("fuck: #{x2 - x1}, #{x3 - x2}, #{x4 - x3}, #{x5 - x4}")
+    console.log("fuck: #{x2 - x1}, #{x3 - x2}, #{x4 - x3}")
 
   debug: (message) ->
     console.log "[#{@name}] #{message}"

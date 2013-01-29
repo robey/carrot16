@@ -22,6 +22,9 @@ class Editor
   # width (in chars) of the listing gutter
   LISTING_WIDTH: 27
 
+  # wait this long for typing to stop before calling the update callback
+  TYPING_RATE: 500
+
   constructor: (@element) ->
     @div =
       textBackground: element.find(".editor-text-background")
@@ -33,13 +36,16 @@ class Editor
       listing: element.find(".editor-listing")
       cursor: element.find(".editor-cursor")
       cursorHighlight: element.find(".editor-highlight-line-cursor")
+    # called when the contents have changed:
+    #   - after a pause in typing (TYPING_RATE)
+    #   - immediately on cut/paste, enter, or backspace/delete across lines
+    @updateCallback = (-> true)
     @replaceText("")
     setTimeout((=> @init()), 1)
 
   init: ->
     @calculateEm()
     @lineHeight = parseInt(@element.css("line-height"))
-    @windowLines = Math.floor(@element.height() / @lineHeight)
     # force line numbers to be 5-em wide.
     @div.gutter.css("width", @GUTTER_WIDTH * @em + 20)
     # force listing to be 20-em wide.
@@ -94,6 +100,8 @@ class Editor
     @inited = true
     @fixHeights()
     @div.text.focus()
+
+  windowLines: -> Math.floor(@element.height() / @lineHeight)
 
   # fix the heights of various elements to match the current text size
   fixHeights: ->
@@ -236,7 +244,7 @@ class Editor
     if lineTop < windowTop
       @element.scrollTop(Math.max(0, lineTop - @lineHeight))
     else if lineBottom > windowBottom
-      @element.scrollTop(lineTop - @lineHeight * (@windowLines - 1))
+      @element.scrollTop(lineTop - @lineHeight * (@windowLines() - 1))
 
   setCursor: (x, y) ->
     @moveCursor(x, y)
@@ -369,14 +377,14 @@ class Editor
     @setCursor()
 
   movePageUp: ->
-    @cursorY -= @windowLines
+    @cursorY -= @windowLines()
     if @cursorY < 0 then @cursorY = 0
     @adjustX()
     @centerLine()
     @setCursor()
 
   movePageDown: ->
-    @cursorY += @windowLines
+    @cursorY += @windowLines()
     if @cursorY > @lines.length - 1 then @cursorY = @lines.length - 1
     @adjustX()
     @centerLine()
@@ -426,6 +434,15 @@ class Editor
 
   # ----- actions
 
+  typed: ->
+    if @typingTimer? then clearTimeout(@typingTimer)
+    @typingTimer = setTimeout((=> @typingFinished()), @TYPING_RATE)
+
+  typingFinished: ->
+    if @typingTimer? then clearTimeout(@typingTimer)
+    @typingTimer = null
+    @updateCallback()
+
   left: ->
     @cancelSelection()
     @moveLeft()
@@ -470,6 +487,7 @@ class Editor
 
   deleteForward: ->
     @virtualX = 0
+    @typed()
     if @selection?
       @deleteSelection()
       return
@@ -479,9 +497,11 @@ class Editor
     else if @cursorY < @lines.length - 1
       @addUndo(Undo.INSERT, @cursorX, @cursorY, "\n", @cursorX, @cursorY)
       @mergeLines(@cursorY)
+      @typingFinished()
 
   backspace: ->
     @virtualX = 0
+    @typed()
     if @selection?
       @deleteSelection()
       return
@@ -493,16 +513,18 @@ class Editor
       @setCursor(@lines[@cursorY - 1].length, @cursorY - 1)
       @addUndo(Undo.INSERT, @cursorX, @cursorY, "\n", 0, @cursorY + 1)
       @mergeLines(@cursorY)
+      @typingFinished()
 
   deleteToEol: ->
     # would be nice to add this to the clipboard, emacs style, but javascript can't access the clipboard on the fly.
     @virtualX = 0
+    @typed()
     @addUndo(Undo.INSERT, @cursorX, @cursorY, @lines[@cursorY][@cursorX ...], @cursorX, @cursorY)
     @lines[@cursorY] = @lines[@cursorY][0 ... @cursorX]
     @refreshLine(@cursorY)
 
   centerLine: ->
-    topLine = Math.max(@cursorY - Math.floor((@windowLines - 1) / 2), 0)
+    topLine = Math.max(@cursorY - Math.floor((@windowLines() - 1) / 2), 0)
     @element.scrollTop(topLine * @lineHeight)
 
   insertChar: (c) ->
@@ -511,12 +533,14 @@ class Editor
   insert: (text) ->
     if @selection? then @deleteSelection()
     @virtualX = 0
+    @typed()
     [ x, y ] = @insertText(@cursorX, @cursorY, text)
     @addUndo(Undo.DELETE, @cursorX, @cursorY, text, x, y)
     @setCursor(x, y)
 
   enter: ->
     @virtualX = 0
+    @typingFinished()
     @addUndo(Undo.MERGE, @cursorX, @cursorY)
     [ x, y ] = @insertLF(@cursorX, @cursorY)
     @setCursor(x, y)
@@ -597,10 +621,12 @@ class Editor
   cutSelection: (clipboard) ->
     @copySelection(clipboard)
     @deleteSelection()
+    @typed()
     false
 
   paste: (clipboard) ->
     if "text/plain" in clipboard.types then @insert(clipboard.getData("text/plain"))
+    @typed()
     false
 
   selectWord: ->
@@ -666,6 +692,7 @@ class Editor
     @cancelSelection()
     item = @undoBuffer.pop()
     if not item? then return
+    @typed()
     @redoBuffer.push(item)
     switch item.action
       when Undo.INSERT, Undo.INSERT_SELECT
@@ -685,6 +712,7 @@ class Editor
     @cancelSelection()
     item = @redoBuffer.pop()
     if not item? then return
+    @typed()
     @undoBuffer.push(item)
     switch item.action
       when Undo.INSERT, Undo.INSERT_SELECT
