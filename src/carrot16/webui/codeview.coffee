@@ -20,6 +20,8 @@ class CodeView
     webui.Tabs.connect @tab, @pane
     CodeViewSet.add(@)
     @editor = new webui.Editor($("##{@name} .editor"))
+    @div =
+      listing: $("##{@name} .editor-listing")
 #    @textarea.bind "input", => @codeEdited()
 #    @textarea.bind "change", => @codeChanged()
     @codebox = $("##{@name} .code-box")
@@ -110,6 +112,7 @@ class CodeView
 
   resize: ->
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
+    @editor.fixHeights()
     @updatePcHighlight()
 
   updatePcHighlight: (alsoScroll) ->
@@ -179,27 +182,27 @@ class CodeView
   # build up the dump panel (lines of "offset: words...")
   # FIXME: profiling reveals that this takes way longer than actually assembling. :(
   buildDump: ->
-    @addrDiv.empty()
-    @dumpDiv.empty()
+    @div.listing.empty()
     @updatePcHighlight()
     if not @assembled? then return
     # wrap in extra divs so empty() doesn't take forever.
-    ad = $("<div/>")
-    dd = $("<div/>")
+    outer = $("<div/>")
+    outer.css("height", "100%")
     for info in @assembled.lines
+      div = $("<div/>")
       if info.data.length > 0
         addr = info.org
         span = $("<span />")
-        span.text(sprintf("%04x:", addr))
+        span.text(sprintf("%04x", addr))
         span.addClass("pointer")
         do (addr) =>
           span.click(=> webui.MemView.scrollTo(addr))
-        ad.append(span)
-        dd.append((for x in info.data then sprintf("%04x", x)).join(" "))
-      ad.append("<br/>")
-      dd.append("<br/>")
-    @addrDiv.append(ad)
-    @dumpDiv.append(dd)
+        div.append(span)
+        div.append(": ")
+        div.append((for x in info.data then sprintf("%04x", x)).join(" "))
+      outer.append(div)
+    @div.listing.append(outer)
+    @editor.fixHeights()
 
   debug: (message) ->
     console.log "[#{@name}] #{message}"

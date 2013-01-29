@@ -13,7 +13,14 @@ class Editor
   # rate at which scrolling should happen when the mouse button is held past the edge of the editor (msec)
   AUTO_SCROLL_RATE: 100
 
+  # how fast you must click twice or thrice
   DOUBLE_CLICK_RATE: 250
+
+  # width (in chars) of the line-numbers gutter
+  GUTTER_WIDTH: 5
+
+  # width (in chars) of the listing gutter
+  LISTING_WIDTH: 27
 
   constructor: (@element) ->
     @div =
@@ -34,9 +41,9 @@ class Editor
     @lineHeight = parseInt(@element.css("line-height"))
     @windowLines = Math.floor(@element.height() / @lineHeight)
     # force line numbers to be 5-em wide.
-    @div.gutter.css("width", 5 * @em + 20)
+    @div.gutter.css("width", @GUTTER_WIDTH * @em + 20)
     # force listing to be 20-em wide.
-    @div.listing.css("width", 22 * @em)
+    @div.listing.css("width", @LISTING_WIDTH * @em)
     # hook up keyboard control
     @div.text.focus => @startCursor()
     @div.text.blur => @stopCursor()
@@ -174,7 +181,7 @@ class Editor
   # callback(line#, text)
   foreachLine: (f) ->
     for i in [0 ... @lines.length] then f(i, @lines[i])
-      
+
   # ----- line manipulation
 
   # factor out the code to make new div lines
