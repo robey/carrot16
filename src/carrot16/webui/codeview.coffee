@@ -158,19 +158,28 @@ class CodeView
     @assembled?
 
   # build up the dump panel (lines of "offset: words...")
-  # FIXME: profiling reveals that this takes way longer than actually assembling. :(
+  # for large code, this can take a long time and may block the UI thread, so
+  # some care is taken to chop up the work.
   buildDump: ->
-    x1 = Date.now()
+    startTime = Date.now()
+    if @buildDumpTimer? then clearTimeout(@buildDumpTimer)
     @div.listing.find("div").remove()
-    x2 = Date.now()
     @updatePcHighlight()
     if not @assembled? then return
-    # wrap in extra divs so empty() doesn't take forever.
+    # wrap in an extra div so clearing it doesn't take forever.
     outer = $("<div/>")
     outer.css("height", "100%")
     @div.listing.append(outer)
-    x3 = Date.now()
-    for info in @assembled.lines
+    @div.listingWrapper = outer
+    @buildDumpTimer = setTimeout((=> @buildDumpContinue(0, startTime, Date.now() - startTime)), 10)
+
+  buildDumpContinue: (n, originalStartTime, totalTime) ->
+    @buildDumpTimer = null
+    if not @assembled? then return
+    outer = @div.listingWrapper
+    startTime = Date.now()
+    while n < @assembled.lines.length
+      info = @assembled.lines[n]
       div = $("<div/>")
       if info.data.length > 0
         addr = info.org
@@ -183,8 +192,15 @@ class CodeView
         div.append(": ")
         div.append((for x in info.data then sprintf("%04x", x)).join(" "))
       outer.append(div)
-    x4 = Date.now()
-    console.log("fuck: #{x2 - x1}, #{x3 - x2}, #{x4 - x3}")
+      n += 1
+      # consume only 25ms out of every 50ms
+      elapsed = Date.now() - startTime
+      if elapsed >= 25
+        @buildDumpTimer = setTimeout((=> @buildDumpContinue(n, originalStartTime, totalTime + elapsed)), 25)
+        return
+    totalTime += elapsed
+    wallTime = Date.now() - originalStartTime
+    @debug "finished dump of #{@getName()} in #{totalTime} msec (across #{wallTime} msec)"
 
   debug: (message) ->
     console.log "[#{@name}] #{message}"
