@@ -3,6 +3,7 @@
   <head>
     <title>carrot16</title>
     <script type="text/javascript" src="js/lib/jquery-1.8.3.js"></script>
+    <script type="text/javascript" src="js/lib/jquery.hotkeys.js"></script>
     <script type="text/javascript" src="js/lib/bootstrap-2.2.2.min.js"></script>
     <script type="text/javascript" src="js/lib/sprintf-0.7-beta1.js"></script>
     <script type="text/javascript" src="js/lib/d16asm.js"></script>
@@ -11,6 +12,7 @@
     <script type="text/javascript" src="js/built/webui.js"></script>
     <link rel="stylesheet" href="css/bootstrap-2.2.2.css" />
     <link rel="stylesheet" href="css/carrot16.css" />
+    <link rel="stylesheet" href="css/editor.css" />
     <link rel="shortcut icon" type="image/png" href="./images/carrot.png" />
   </head>
   <body>
@@ -123,18 +125,19 @@
       <div class="noscroll" id="left_panel">
 
         <!-- prototype editor pane -->
-        <div class="row-fluid pane pane-editor" id="codeview-prototype">
-          <div class="span1 mono pointer linenums">
-            <div>
-              <span class="code-highlight-line code-pc-line"></span>
+        <div class="pane pane-editor" id="codeview-prototype">
+          <div class="editor">
+            <div class="editor-text-background editor-side-padding"></div>
+            <div class="editor-scroll">
+              <div class="editor-highlight-line editor-highlight-line-cursor"></div>
+              <div class="editor-highlight-line code-pc-line"></div>
+              <div class="editor-gutter editor-mono"></div>
+              <div class="editor-listing editor-mono"></div>
+              <div class="editor-text editor-side-padding editor-mono editable" tabindex="-1">
+                <div class="editor-cursor"></div>
+              </div>
             </div>
-            <div class="code-linenums"></div>
           </div>
-          <div class="span7 code-box">
-            <textarea class="mono code-textarea" wrap=off spellcheck="false"></textarea>
-          </div>
-          <div class="span1 mono linenums code-addr"></div>
-          <div class="span3 mono code-dump"></div>
         </div>
 
         <!-- memory view pane -->

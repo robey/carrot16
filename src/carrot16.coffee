@@ -17,4 +17,7 @@ key = require './carrot16/key'
 exports.Key = key.Key
 
 keyboard = require './carrot16/keyboard'
-exports.Keyboard = key.Keyboard
+exports.Keyboard = keyboard.Keyboard
+
+editor = require './carrot16/editor'
+exports.Editor = editor.Editor

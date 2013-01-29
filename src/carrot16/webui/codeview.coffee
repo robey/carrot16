@@ -81,11 +81,10 @@ class CodeView
     edit.select()
 
   setCode: (text) ->
-    @textarea.empty()
-    @textarea.val(text)
+    @editor.replaceText(text)
     @codeChanged()
 
-  getCode: -> @textarea.val().split("\n")
+  getCode: -> @editor.lines
 
   save: ->
     new window.Blob([ @textarea.val() ], type: "text/plain")
@@ -206,6 +205,7 @@ class CodeView
     @dumpDiv.empty()
     @updatePcHighlight()
     if not @assembled? then return
+    # wrap in extra divs so empty() doesn't take forever.
     ad = $("<div/>")
     dd = $("<div/>")
     for info in @assembled.lines
