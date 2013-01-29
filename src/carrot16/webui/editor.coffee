@@ -64,6 +64,8 @@ class Editor
     @div.text.bind "keydown", "shift+pageup", => (@moveSelection(@SELECTION_LEFT, => @movePageUp()); false)
     @div.text.bind "keydown", "pagedown", => (@pageDown(); false)
     @div.text.bind "keydown", "shift+pagedown", => (@moveSelection(@SELECTION_RIGHT, => @movePageDown()); false)
+    @div.text.bind "keydown", "meta+up", => (@top(); false)
+    @div.text.bind "keydown", "meta+down", => (@bottom(); false)
     @div.text.bind "keydown", "backspace", => (@backspace(); false)
     @div.text.bind "keydown", "del", => (@deleteForward(); false)
     @div.text.bind "keydown", "space", => (@insertChar(32); false)
@@ -182,6 +184,10 @@ class Editor
   foreachLine: (f) ->
     for i in [0 ... @lines.length] then f(i, @lines[i])
 
+  getLine: (y) -> @lines[y]
+
+  focus: -> @div.text.focus()
+
   # ----- line manipulation
 
   # factor out the code to make new div lines
@@ -234,7 +240,7 @@ class Editor
 
   setCursor: (x, y) ->
     @moveCursor(x, y)
-    @scrollToLine(y)
+    @scrollToLine(@cursorY)
 
   stopCursor: ->
     if @cursorTimer? then clearInterval(@cursorTimer)
@@ -454,6 +460,14 @@ class Editor
     @cancelSelection()
     @movePageDown()
 
+  top: ->
+    @cancelSelection()
+    @setCursor(0, 0)
+
+  bottom: ->
+    @cancelSelection()
+    @setCursor(0, @lines.length - 1)
+
   deleteForward: ->
     @virtualX = 0
     if @selection?
@@ -542,6 +556,12 @@ class Editor
       @selectionIndex = 1 - @selectionIndex
     for n in [Math.min(@selection[0].y, oldy) .. Math.max(@selection[1].y, oldy)] then @refreshLine(n)
 
+  setSelection: (x0, y0, x1, y1) ->
+    @cancelSelection()
+    @startSelection(@SELECTION_RIGHT, x0, y0)
+    @addSelection(x1, y1)
+    @setCursor(x1, y1)
+
   deleteSelection: ->
     [ x0, y0, x1, y1 ] = [ @selection[0].x, @selection[0].y, @selection[1].x, @selection[1].y ]
     @addUndo(Undo.INSERT_SELECT, x0, y0, @getSelection(), x1, y1)
@@ -586,28 +606,22 @@ class Editor
   selectWord: ->
     x1 = Math.max(0, @cursorX - 1)
     x2 = x1
-    while x1 > 0 and @lines[@cursorY][x1].match(/\w/)? then x1 -= 1
+    while x1 >= 0 and @lines[@cursorY][x1].match(/\w/)? then x1 -= 1
     while x2 < @lines[@cursorY].length and x2 > 0 and @lines[@cursorY][x2].match(/\w/)? then x2 += 1
     if x2 > x1
-      @startSelection(@SELECTION_RIGHT, x1 + 1, @cursorY)
-      @addSelection(x2, @cursorY)
-      @setCursor(x2, @cursorY)
+      @setSelection(x1 + 1, @cursorY, x2, @cursorY)
     else if @lines[@cursorY][x1] != " "
-      @startSelection(@SELECTION_RIGHT, x1, @cursorY)
-      @addSelection(x1 + 1, @cursorY)
-      @setCursor(x1 + 1, @cursorY)
+      @setSelection(x1, @cursorY, x1 + 1, @cursorY)
 
   selectLine: ->
     if @lines[@cursorY].length == 0 then return
-    @startSelection(@SELECTION_RIGHT, 0, @cursorY)
     if @cursorY + 1 < @lines.length
-      @addSelection(0, @cursorY + 1)
-      @setCursor(0, @cursorY + 1)
+      @setSelection(0, @cursorY, 0, @cursorY + 1)
     else
-      @addSelection(@lines[@cursorY].length, @cursorY)
-      @setCursor(@lines[@cursorY].length, @cursorY)
+      @setSelection(0, @cursorY, @lines[@cursorY].length, @cursorY)
 
   selectAll: ->
+    @cancelSelection()
     @startSelection(@SELECTION_RIGHT, 0, 0)
     @addSelection(@lines[@lines.length - 1].length, @lines.length - 1)
 
@@ -658,8 +672,7 @@ class Editor
         @insertText(item.x, item.y, item.text)
         @setCursor(item.nextX, item.nextY)
         if item.action == Undo.INSERT_SELECT
-          @startSelection(@SELECTION_RIGHT, item.x, item.y)
-          @addSelection(item.nextX, item.nextY)
+          @setSelection(item.x, item.y, item.nextX, item.nextY)
       when Undo.DELETE
         @deleteText(item.x, item.y, item.text.length)
         @setCursor(item.x, item.y)

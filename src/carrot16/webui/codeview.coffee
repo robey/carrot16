@@ -146,23 +146,31 @@ class CodeView
   atBreakpoint: ->
     @breakpoints[@assembled.memToLine(emulator.registers.PC)]
 
-  logError: (n, message) ->
+  highlightError: (y, x) ->
+    @scrollToLine(y)
+    line = @editor.getLine(y)
+    [ x0, x1 ] = [ x, x + 1 ]
+    while x1 < line.length and line[x1].match(/\w/)? then x1 += 1
+    @editor.setSelection(x0, y, x1, y)
+    @editor.focus()
+
+  logError: (y, x, message) ->
     linenum = $("<span />")
     linenum.addClass("line")
     linenum.addClass("pointer")
-    linenum.text(sprintf("%5d", n + 1))
-    linenum.click => @scrollToLine(n)
+    linenum.text(sprintf("%5d", y + 1))
+    linenum.click => @highlightError(y, x)
     line = $("<span />")
     line.append(linenum)
     line.append(": #{message}")
     webui.LogPane.log(line)
-    @editor.setLineNumberError(n)
+    @editor.setLineNumberError(y)
 
   assemble: ->
     @debug "start assembly of #{@getName()}"
     @editor.clearLineNumberErrors()
     startTime = Date.now()
-    logger = (n, pos, message) => @logError(n, message)
+    logger = (n, pos, message) => @logError(n, pos, message)
     asm = new d16bunny.Assembler(logger)
     @assembled = asm.compile(@getCode())
     if @assembled.errorCount > 0
@@ -182,12 +190,16 @@ class CodeView
   # build up the dump panel (lines of "offset: words...")
   # FIXME: profiling reveals that this takes way longer than actually assembling. :(
   buildDump: ->
-    @div.listing.empty()
+    x1 = Date.now()
+    @div.listing.find("div").remove()
+    x2 = Date.now()
     @updatePcHighlight()
     if not @assembled? then return
     # wrap in extra divs so empty() doesn't take forever.
     outer = $("<div/>")
     outer.css("height", "100%")
+    @div.listing.append(outer)
+    x3 = Date.now()
     for info in @assembled.lines
       div = $("<div/>")
       if info.data.length > 0
@@ -201,8 +213,10 @@ class CodeView
         div.append(": ")
         div.append((for x in info.data then sprintf("%04x", x)).join(" "))
       outer.append(div)
-    @div.listing.append(outer)
+    x4 = Date.now()
     @editor.fixHeights()
+    x5 = Date.now()
+    console.log("fuck: #{x2 - x1}, #{x3 - x2}, #{x4 - x3}, #{x5 - x4}")
 
   debug: (message) ->
     console.log "[#{@name}] #{message}"
