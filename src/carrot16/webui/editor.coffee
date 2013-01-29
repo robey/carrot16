@@ -5,7 +5,6 @@
 # - copy / paste
 # - C-y
 # - when going up/down, remember "virtual x" on short lines
-# - shift click select
 #
 
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
@@ -30,11 +29,6 @@ class Editor
       listing: element.find(".editor-listing")
       cursor: element.find(".editor-cursor")
       cursorHighlight: element.find(".editor-cursor-highlight")
-    @lines = []
-    @selection = null
-    @selectionIndex = 0
-    @undoBuffer = []
-    @redoBuffer = []
     setTimeout((=> @init()), 1)
 
   init: ->
@@ -70,6 +64,7 @@ class Editor
     @div.text.bind "keydown", "del", => (@deleteForward(); false)
     @div.text.bind "keydown", "space", => (@insertChar(32); false)
     @div.text.bind "keydown", "return", => (@enter(); false)
+    @div.text.bind "keydown", "meta+a", => (@selectAll(); false)
     @div.text.bind "keydown", "meta+z", => (@undo(); false)
     @div.text.bind "keydown", "meta+shift+z", => (@redo(); false)
     # hello emacs users!
@@ -85,8 +80,13 @@ class Editor
     @div.text.bind "keydown", "ctrl+p", => (@up(); false)
     @div.text.bind "keydown", "ctrl+z", => (@undo(); false)
     @div.text.bind "keydown", "ctrl+shift+z", => (@redo(); false)
+    # cut/copy/paste
+    @div.text.bind "copy", (e) => @copySelection(e.originalEvent.clipboardData)
+    @div.text.bind "cut", (e) => @cutSelection(e.originalEvent.clipboardData)
+    @div.text.bind "paste", (e) => @paste(e.originalEvent.clipboardData)
+
     # start!
-    @setCursor()
+    @replaceText("")
     @div.text.focus()
 
   # fix the heights of various elements to match the current text size
@@ -119,6 +119,9 @@ class Editor
     @div.lines = []
     @lines = []
     @undoBuffer = []
+    @redoBuffer = []
+    @selection = null
+    @selectionIndex = 0
     @cursorX = 0
     @cursorY = 0
     @fixHeights()
@@ -131,6 +134,14 @@ class Editor
       @div.lines.push div
       @div.text.append div
     @fixHeights()
+    # chrome won't let us receive pastes unless we appear to have text
+    # selected (?), so we always report a selection.
+    selection = window.getSelection()
+    selection.removeAllRanges()
+    range = document.createRange()
+    range.setStart(@div.lines[0][0], 0)
+    range.setEnd(@div.lines[0][0], 0)
+    selection.addRange(range)
 
   # ----- line manipulation
 
@@ -191,6 +202,7 @@ class Editor
   startCursor: ->
     @stopCursor()
     @cursorTimer = setInterval((=> @blinkCursor()), @CURSOR_RATE)
+    @setCursor()
 
   blinkCursor: ->
     @div.cursor.css("display", if @div.cursor.css("display") == "none" then "block" else "none")
@@ -218,6 +230,7 @@ class Editor
     false
 
   mouseUpEvent: (event) ->
+    @div.text.focus()
     [ x, y ] = @mouseToPosition(event)
     [ @cursorX, @cursorY ] = [ x, y ]
     @setCursor()
@@ -319,10 +332,18 @@ class Editor
 
   # ----- operations on the text
 
-  # remove characters from a line
   deleteText: (x, y, count) ->
+    n = @lines[y][x ... x + count].length
     @lines[y] = @lines[y][0...x] + @lines[y][x + count ...]
     @refreshLine(y)
+    count -= n
+    while count > 0 and y + 1 < @lines.length
+      if @lines[y + 1].length <= count
+        count -= @lines[y + 1].length
+        @deleteLine(y + 1)
+      else
+        @lines[y + 1] = @lines[y + 1][count...]
+        count = 0
 
   # merge line with the line below it.
   mergeLines: (y) ->
@@ -460,9 +481,7 @@ class Editor
     @autoScrollTimer = null
 
   addSelection: (x, y) ->
-    if not @selection?
-      @cancelSelection()
-      return
+    if not @selection? then return
     oldx = @selection[@selectionIndex].x
     oldy = @selection[@selectionIndex].y
     @selection[@selectionIndex].x = x
@@ -475,24 +494,44 @@ class Editor
 
   deleteSelection: ->
     [ x0, y0, x1, y1 ] = [ @selection[0].x, @selection[0].y, @selection[1].x, @selection[1].y ]
+    @addUndo(Undo.INSERT_SELECT, x0, y0, @getSelection(), x1, y1)
     if y0 == y1
       # within one line
-      @addUndo(Undo.INSERT_SELECT, x0, y0, @lines[y0][x0...x1], x1, y0)
       @deleteText(x0, y0, x1 - x0)
     else
       # multi-line
-      buffer = [ @lines[y0][x0...] ].concat (for y in [y0 + 1 ... y1] then @lines[y]), [ @lines[y1][...x1] ]
-      @addUndo(Undo.INSERT_SELECT, x0, y0, buffer.join("\n"), x1, y1)
-      @lines[y0] = @lines[y0][0 ... @selection[0].x] + @lines[y1][@selection[1].x ...]
+      @lines[y0] = @lines[y0][...x0] + @lines[y1][x1...]
       for y in [y0 + 1 .. y1] then @deleteLine(y0 + 1)
     @setCursor(x0, y0)
     @selection = null
     @refreshLine(y0)
 
+  getSelection: ->
+    if not @selection? then return ""
+    [ x0, y0, x1, y1 ] = [ @selection[0].x, @selection[0].y, @selection[1].x, @selection[1].y ]
+    if y0 == y1
+      @lines[y0][x0...x1]
+    else
+      buffer = [ @lines[y0][x0...] ].concat (for y in [y0 + 1 ... y1] then @lines[y]), [ @lines[y1][...x1] ]
+      buffer.join("\n")
+
   moveSelection: (direction, movement) ->
     @startSelection(direction, @cursorX, @cursorY)
     movement()
     @addSelection(@cursorX, @cursorY)
+
+  copySelection: (clipboard) ->
+    clipboard.setData("Text", @getSelection())
+    false
+
+  cutSelection: (clipboard) ->
+    @copySelection(clipboard)
+    @deleteSelection()
+    false
+
+  paste: (clipboard) ->
+    if "text/plain" in clipboard.types then @insert(clipboard.getData("text/plain"))
+    false
 
   selectWord: ->
     x1 = Math.max(0, @cursorX - 1)
@@ -517,6 +556,11 @@ class Editor
     else
       @addSelection(@lines[@cursorY].length, @cursorY)
       @setCursor(@lines[@cursorY].length, @cursorY)
+
+  selectAll: ->
+    @startSelection(@SELECTION_RIGHT, 0, 0)
+    @addSelection(@lines[@lines.length - 1].length, @lines.length - 1)
+    
 
   # ----- undo
 
@@ -557,7 +601,6 @@ class Editor
     @cancelSelection()
     item = @undoBuffer.pop()
     if not item? then return
-    # FIXME: redo?
     @redoBuffer.push(item)
     switch item.action
       when Undo.INSERT, Undo.INSERT_SELECT
