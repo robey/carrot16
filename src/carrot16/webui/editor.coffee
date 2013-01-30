@@ -539,6 +539,7 @@ class Editor
     @setCursor(x, y)
 
   enter: ->
+    if @selection? then @deleteSelection()
     @virtualX = 0
     @typingFinished()
     [ x, y ] = @insertLF(@cursorX, @cursorY)
