@@ -441,7 +441,7 @@ class Editor
   typingFinished: ->
     if @typingTimer? then clearTimeout(@typingTimer)
     @typingTimer = null
-    @updateCallback()
+    setTimeout((=> @updateCallback()), 0)
 
   left: ->
     @cancelSelection()
