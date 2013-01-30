@@ -541,8 +541,8 @@ class Editor
   enter: ->
     @virtualX = 0
     @typingFinished()
-    @addUndo(Undo.MERGE, @cursorX, @cursorY)
     [ x, y ] = @insertLF(@cursorX, @cursorY)
+    @addUndo(Undo.DELETE, @cursorX, @cursorY, "\n", x, y)
     @setCursor(x, y)
 
   # ----- selection
@@ -661,7 +661,6 @@ class Editor
     @INSERT = 1
     @INSERT_SELECT = 2
     @DELETE = 3
-    @MERGE = 4 # FIXME
 
     constructor: (@action, @x, @y, @text, @nextX, @nextY) ->
       @when = Date.now()
@@ -703,9 +702,6 @@ class Editor
       when Undo.DELETE
         @deleteText(item.x, item.y, item.text.length)
         @setCursor(item.x, item.y)
-      when Undo.MERGE
-        @mergeLines(item.y)
-        @setCursor(item.x, item.y)
 
   redo: ->
     @virtualX = 0
@@ -721,9 +717,6 @@ class Editor
       when Undo.DELETE
         @insertText(item.x, item.y, item.text)
         @setCursor(item.nextX, item.nextY)
-      when Undo.MERGE
-        [ x, y ] = @insertLF(item.x, item.y)
-        @setCursor(x, y)
 
 
 exports.Editor = Editor
