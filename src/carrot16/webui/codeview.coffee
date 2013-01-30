@@ -163,24 +163,22 @@ class CodeView
   buildDump: ->
     startTime = Date.now()
     if @buildDumpTimer? then clearTimeout(@buildDumpTimer)
-    @div.listing.find("div").remove()
     @updatePcHighlight()
-    if not @assembled? then return
+    if not @assembled?
+      @div.listing.empty()
+      return
     # wrap in an extra div so clearing it doesn't take forever.
-    outer = $("<div/>")
-    outer.css("height", "100%")
-    @div.listing.append(outer)
-    @div.listingWrapper = outer
+    @div.listingWrapper = $("<div/>")
+    @div.listingWrapper.css("height", "100%")
     @buildDumpTimer = setTimeout((=> @buildDumpContinue(0, startTime, Date.now() - startTime)), 10)
 
   buildDumpContinue: (n, originalStartTime, totalTime) ->
     @buildDumpTimer = null
     if not @assembled? then return
-    outer = @div.listingWrapper
     startTime = Date.now()
     while n < @assembled.lines.length
       info = @assembled.lines[n]
-      div = $("<div/>")
+      line = $("<div/>")
       if info.data.length > 0
         addr = info.org
         span = $("<span />")
@@ -188,16 +186,19 @@ class CodeView
         span.addClass("pointer")
         do (addr) =>
           span.click(=> webui.MemView.scrollTo(addr))
-        div.append(span)
-        div.append(": ")
-        div.append((for x in info.data then sprintf("%04x", x)).join(" "))
-      outer.append(div)
+        line.append(span)
+        line.append(": ")
+        line.append((for x in info.data then sprintf("%04x", x)).join(" "))
+      @div.listingWrapper.append(line)
       n += 1
       # consume only 25ms out of every 50ms
       elapsed = Date.now() - startTime
       if elapsed >= 25
         @buildDumpTimer = setTimeout((=> @buildDumpContinue(n, originalStartTime, totalTime + elapsed)), 25)
         return
+    @div.listing.empty()
+    @div.listing.append(@div.listingWrapper)
+    @div.listingWrapper = null
     totalTime += elapsed
     wallTime = Date.now() - originalStartTime
     @debug "finished dump of #{@getName()} in #{totalTime} msec (across #{wallTime} msec)"
