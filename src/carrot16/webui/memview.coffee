@@ -136,6 +136,7 @@ MemView =
   buildRow: (addrRow, element) ->
     chars = $("<span/>")
     chars.attr("id", "chars_#{sprintf("%04x", addrRow)}")
+    chars.css("display", "pre")
     for addr in [addrRow ... addrRow + @columns]
       addrx = sprintf("%04x", addr)
       cell = $("<span/>")
@@ -173,8 +174,10 @@ MemView =
   addChars: (chars, addr) ->
     value = emulator.memory.peek(addr)
     for v in [ (value >> 8) & 0xff, value & 0xff ]
-      if v >= 0x20 and v < 0x7f
+      if v > 0x20 and v < 0x7f
         chars.append(String.fromCharCode(v))
+      else if v == 0x20
+        chars.append("\u00a0")
       else
         chars.append(".")
 

@@ -14,7 +14,7 @@
 # ----- things that must be accessible from html (globals)
 
 @updateViews = (options) ->
-  # FIXME: if @emulator.onFire then: show cool fire image.
+  $("#fire_overlay").css("display", if @emulator.onFire then "block" else "none")
   if webui.CodeViewSet.visible()
     webui.CodeViewSet.updatePcHighlight(options?.scroll)
   webui.MemView.update()

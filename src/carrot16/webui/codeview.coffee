@@ -19,36 +19,13 @@ class CodeView
     $("#left_panel").append(@pane)
     webui.Tabs.connect @tab, @pane
     CodeViewSet.add(@)
-    @textarea = $("##{@name} .code-textarea")
-    @textarea.bind "input", => @codeEdited()
-    @textarea.bind "change", => @codeChanged()
-    @linenums = $("##{@name} .code-linenums")
-    @codebox = $("##{@name} .code-box")
-    @pcline = $("##{@name} .code-pc-line")
-    @addrDiv = $("##{@name} .code-addr")
-    @dumpDiv = $("##{@name} .code-dump")
+    @editor = new webui.Editor($("##{@name} .editor"))
+    @editor.updateCallback = (=> @codeChanged())
+    @div =
+      listing: $("##{@name} .editor-listing")
+      pcline: $("##{@name} .code-pc-line")
     @assembled = null
     @breakpoints = {}
-    @pane.data "keydown", (key) =>
-      if key == Key.ENTER
-        # many things about javascript and html/css are confounding to me,
-        # but this one is the *most* confounding to me. we want to start the
-        # assembler "as soon as" the user hits enter, so that the editor
-        # seems fairly responsive. but we want chrome to update the UI (the
-        # bits on the screen) so that the user sees the effect of hitting
-        # enter.
-        #
-        # chrome will not update the screen unless we delay by some amount
-        # of time. my testing showed that 0ms is not enough, and chrome will
-        # refuse to update the screen unless we wait at least 10ms, sometimes
-        # even 15ms. i have no idea why. i would love to know! please write
-        # me and tell me why!
-        #
-        # in the meantime, i'm hoping that 50ms is sufficient for chrome to
-        # always be satisfied that it's okay to update the screen, but fast
-        # enough that the user perceives the assembler as starting up
-        # "immediately".
-        setTimeout((=> @codeChanged()), 50)
 
   setName: (name) ->
     $("##{@tabName} a").text(name)
@@ -81,11 +58,10 @@ class CodeView
     edit.select()
 
   setCode: (text) ->
-    @textarea.empty()
-    @textarea.val(text)
+    @editor.replaceText(text)
     @codeChanged()
 
-  getCode: -> @textarea.val().split("\n")
+  getCode: -> @editor.lines
 
   save: ->
     new window.Blob([ @textarea.val() ], type: "text/plain")
@@ -95,71 +71,44 @@ class CodeView
   visible: -> @pane.css("display") != "none"
 
   codeChanged: ->
-    if @typingTimer? then clearTimeout(@typingTimer)
-    @typingTimer = null
     @update()
     CodeViewSet.assemble()
 
-  codeEdited: ->
-    if @typingTimer? then clearTimeout(@typingTimer)
-    @typingTimer = setTimeout((=> @codeChanged()), @typingDelay)
-
   # rebuild line number column, and resize textarea if necessary.
   update: ->
-    lines = @getCode()
-    @linenums.empty()
-    for i in [0 ... lines.length]
-      span = $("<span />")
-      span.text(i + 1)
-      span.addClass("linenum")
-      span.attr("id", "line#{i}-#{@name}")
-      do (i) =>
-        span.click => @toggleBreakpoint(i)
-      @linenums.append(span)
-    @textarea.css("height", @linenums.css("height"))
+    @editor.foreachLine (i, text) =>
+      @editor.onLineNumberClick i, => @toggleBreakpoint(i)
     @resize()
 
   resize: ->
-    # compensate for extra ceremonial baggage chrome puts around a textarea.
-    @textarea.outerWidth(@codebox.width())
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
+    @editor.setCursor()
     @updatePcHighlight()
 
   updatePcHighlight: (alsoScroll) ->
     n = @assembled?.memToLine(emulator.registers.PC)
     if n?
-      @pcline.css("top", (n * @pcline.height()) + 5)
-      @pcline.css("display", "block")
+      @div.pcline.css("display", "block")
+      @editor.moveDivToLine(@div.pcline, n)
       if alsoScroll
         if not @visible() then @activate()
         @scrollToLine(n)
     else
-      @pcline.css("display", "none")
+      @div.pcline.css("display", "none")
 
   scrollToLine: (n) ->
     if not @visible() then return
-    line = $("#line#{n}-#{@name}")
-    if not line?.offset()? then return
-    lineTop = line.offset().top
-    lineHeight = parseInt(@pane.css("line-height"))
-    top = @pane.position().top
-    bottom = Math.min(top + @pane.height(), webui.LogPane.top())
-    visibleLines = Math.floor((bottom - top) / lineHeight)
-    if lineTop < top + lineHeight or lineTop > bottom - (3 * lineHeight)
-      @pane.scrollTop(if n < 2 then 0 else (n - 2) * lineHeight)
+    @editor.scrollToLine(n)
 
   clearBreakpoints: ->
     @breakpoints = {}
+    @editor.clearLineNumberMarks()
     @update()
 
   setBreakpoint: (linenum, isSet) ->
     if not @assembled?.lineToMem(linenum)? then isSet = false
-    line = $("#line#{linenum}-#{@name}")
     @breakpoints[linenum] = isSet
-    if isSet
-      line.addClass("breakpoint")
-    else
-      line.removeClass("breakpoint")
+    @editor.setLineNumberMarked(linenum, isSet)
 
   toggleBreakpoint: (linenum) ->
     @setBreakpoint(linenum, not @breakpoints[linenum])
@@ -167,61 +116,91 @@ class CodeView
   atBreakpoint: ->
     @breakpoints[@assembled.memToLine(emulator.registers.PC)]
 
-  logError: (n, message) ->
+  highlightError: (y, x) ->
+    @scrollToLine(y)
+    line = @editor.getLine(y)
+    [ x0, x1 ] = [ x, x ]
+    while x1 < line.length and line[x1].match(/\w/)? then x1 += 1
+    if x1 == x0 then x1 += 1
+    @editor.setSelection(x0, y, x1, y)
+    @editor.focus()
+
+  logError: (y, x, message) ->
     linenum = $("<span />")
     linenum.addClass("line")
     linenum.addClass("pointer")
-    linenum.text(sprintf("%5d", n + 1))
-    linenum.click => @scrollToLine(n)
+    linenum.text(sprintf("%5d", y + 1))
+    linenum.click => @highlightError(y, x)
     line = $("<span />")
     line.append(linenum)
     line.append(": #{message}")
     webui.LogPane.log(line)
-    $("#line#{n}-#{@name}").css("background-color", "#f88")
+    @editor.setLineNumberError(y)
 
   assemble: ->
     @debug "start assembly of #{@getName()}"
+    @editor.clearLineNumberErrors()
     startTime = Date.now()
-    logger = (n, pos, message) => @logError(n, message)
+    logger = (n, pos, message) => @logError(n, pos, message)
     asm = new d16bunny.Assembler(logger)
     @assembled = asm.compile(@getCode())
     if @assembled.errorCount > 0
       @assembled = null
-      @buildDump()
-      return false
-    # kinda cheat by poking directly into memory.
-    @assembled.createImage(emulator.memory.memory)
-    # turn off breakpoints that aren't code anymore.
-    for line, isSet of @breakpoints #when isSet
-      @setBreakpoint(line, isSet)
+    else
+      # kinda cheat by poking directly into memory.
+      @assembled.createImage(emulator.memory.memory)
+      # turn off breakpoints that aren't code anymore.
+      for line, isSet of @breakpoints #when isSet
+        @setBreakpoint(line, isSet)
     @debug "finished assembly of #{@getName()} in #{Date.now() - startTime} msec"
     @buildDump()
     @debug "finished assembly & dump of #{@getName()} in #{Date.now() - startTime} msec"
-    true
+    @assembled?
 
   # build up the dump panel (lines of "offset: words...")
-  # FIXME: profiling reveals that this takes way longer than actually assembling. :(
+  # for large code, this can take a long time and may block the UI thread, so
+  # some care is taken to chop up the work.
   buildDump: ->
-    @addrDiv.empty()
-    @dumpDiv.empty()
+    startTime = Date.now()
+    if @buildDumpTimer? then clearTimeout(@buildDumpTimer)
+    @div.listing.find("div").remove()
     @updatePcHighlight()
     if not @assembled? then return
-    ad = $("<div/>")
-    dd = $("<div/>")
-    for info in @assembled.lines
+    # wrap in an extra div so clearing it doesn't take forever.
+    outer = $("<div/>")
+    outer.css("height", "100%")
+    @div.listing.append(outer)
+    @div.listingWrapper = outer
+    @buildDumpTimer = setTimeout((=> @buildDumpContinue(0, startTime, Date.now() - startTime)), 10)
+
+  buildDumpContinue: (n, originalStartTime, totalTime) ->
+    @buildDumpTimer = null
+    if not @assembled? then return
+    outer = @div.listingWrapper
+    startTime = Date.now()
+    while n < @assembled.lines.length
+      info = @assembled.lines[n]
+      div = $("<div/>")
       if info.data.length > 0
         addr = info.org
         span = $("<span />")
-        span.text(sprintf("%04x:", addr))
+        span.text(sprintf("%04x", addr))
         span.addClass("pointer")
         do (addr) =>
           span.click(=> webui.MemView.scrollTo(addr))
-        ad.append(span)
-        dd.append((for x in info.data then sprintf("%04x", x)).join(" "))
-      ad.append("<br/>")
-      dd.append("<br/>")
-    @addrDiv.append(ad)
-    @dumpDiv.append(dd)
+        div.append(span)
+        div.append(": ")
+        div.append((for x in info.data then sprintf("%04x", x)).join(" "))
+      outer.append(div)
+      n += 1
+      # consume only 25ms out of every 50ms
+      elapsed = Date.now() - startTime
+      if elapsed >= 25
+        @buildDumpTimer = setTimeout((=> @buildDumpContinue(n, originalStartTime, totalTime + elapsed)), 25)
+        return
+    totalTime += elapsed
+    wallTime = Date.now() - originalStartTime
+    @debug "finished dump of #{@getName()} in #{totalTime} msec (across #{wallTime} msec)"
 
   debug: (message) ->
     console.log "[#{@name}] #{message}"

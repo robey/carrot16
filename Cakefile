@@ -50,6 +50,7 @@ webFiles = [
   "tabs",
   "registers",
   "codeview",
+  "editor",
   "memview",
   "logpane",
   "editbox",
