@@ -166,7 +166,8 @@ class Editor
     @div.lineNumbers[n]
 
   onLineNumberClick: (n, f) ->
-    @div.lineNumbers[n]?.click(f)
+    @div.lineNumbers[n]?.unbind("click")
+    @div.lineNumbers[n]?.bind("click", f)
     @div.lineNumbers[n]?.css("cursor", "pointer")
 
   setLineNumberMarked: (n, marked) ->
