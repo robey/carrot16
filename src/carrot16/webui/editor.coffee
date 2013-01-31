@@ -51,7 +51,7 @@ class Editor
     # force listing to be 20-em wide.
     @div.listing.css("width", @LISTING_WIDTH * @em)
     # hook up keyboard control
-    @div.text.focus => @startCursor()
+    @div.text.focus => (@startCursor(); @fixSelection())
     @div.text.blur => @stopCursor()
     @div.text.mousedown (event) => @mouseDownEvent(event)
     @div.text.mouseup (event) => @mouseUpEvent(event)
@@ -92,6 +92,8 @@ class Editor
     @div.text.bind "keydown", "ctrl+p", => (@up(); false)
     @div.text.bind "keydown", "ctrl+z", => (@undo(); false)
     @div.text.bind "keydown", "ctrl+shift+z", => (@redo(); false)
+    # hello windows users!
+    @div.text.bind "keydown", "ctrl+shift+a", => (@selectAll(); false)
     # cut/copy/paste
     @div.text.bind "copy", (e) => @copySelection(e.originalEvent.clipboardData)
     @div.text.bind "cut", (e) => @cutSelection(e.originalEvent.clipboardData)
@@ -123,10 +125,23 @@ class Editor
       for div in @div.lineNumbers[@lines.length ...] then div.remove()
       @div.lineNumbers[@lines.length ...] = []
 
+  fixSelection: ->
+    # chrome won't let us receive pastes unless we appear to have text
+    # selected (?), so we always report a selection.
+    selection = window.getSelection()
+    selection.removeAllRanges()
+    range = document.createRange()
+    range.setStart(@div.lines[0][0], 0)
+    range.setEnd(@div.lines[0][0], 0)
+    selection.addRange(range)
+
   calculateEm: ->
-    span = $("<span>0</span>")
+    # gerg-style: non-retina computers may use fractional pixel-widths for text
+    count = 100
+    zeros = (for i in [0...count] then "0").join("")
+    span = $("<span>#{zeros}</span>")
     @div.gutter.append(span)
-    @em = span.outerWidth(true)
+    @em = span.outerWidth(true) / count
     span.remove()
 
   # ----- external convenience API
@@ -153,14 +168,7 @@ class Editor
       @div.lines.push div
       @div.text.append div
     @fixHeights()
-    # chrome won't let us receive pastes unless we appear to have text
-    # selected (?), so we always report a selection.
-    selection = window.getSelection()
-    selection.removeAllRanges()
-    range = document.createRange()
-    range.setStart(@div.lines[0][0], 0)
-    range.setEnd(@div.lines[0][0], 0)
-    selection.addRange(range)
+    @fixSelection()
 
   getLineNumberDiv: (n) ->
     @div.lineNumbers[n]
