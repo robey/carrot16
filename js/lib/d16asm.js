@@ -24,7 +24,7 @@ var exports = {};
       '|': 5
     };
 
-    Assembler.prototype.OperandRegex = /^[A-Za-z_.0-9]+/;
+    Assembler.prototype.OperandRegex = /^[A-Za-z_.0-9]+|\$/;
 
     Assembler.prototype.NumberRegex = /^[0-9]+$/;
 
@@ -32,7 +32,7 @@ var exports = {};
 
     Assembler.prototype.BinaryRegex = /^0b[01]+$/;
 
-    Assembler.prototype.LabelRegex = /^[a-zA-Z_.][a-zA-Z_.0-9]*$/;
+    Assembler.prototype.LabelRegex = /^[a-zA-Z_.][a-zA-Z_.0-9]*|\$$/;
 
     Assembler.prototype.SymbolRegex = /^[a-zA-Z_.][a-zA-Z_.0-9]*/;
 
@@ -46,6 +46,7 @@ var exports = {};
       this.pos = 0;
       this.end = 0;
       this.inMacro = false;
+      this.lastLabel = null;
       this.vars = {};
       this.macros = {};
       return this.symtab = {};
@@ -192,6 +193,9 @@ var exports = {};
         } else if (Dcpu.Registers[operand] != null) {
           return Expression.prototype.Register(this.text, loc, Dcpu.Registers[operand]);
         } else if (Assembler.prototype.LabelRegex.exec(operand) != null) {
+          if (operand[0] === "." && (this.lastLabel != null)) {
+            operand = this.lastLabel + operand;
+          }
           return Expression.prototype.Label(this.text, loc, operand);
         } else {
           return this.fail(loc, "Expected operand");
@@ -256,7 +260,7 @@ var exports = {};
     };
 
     Assembler.prototype.parseOperand = function(destination) {
-      var expr, inPick, inPointer, loc, register;
+      var expr, inPick, inPointer, loc, op, register, _ref;
       this.debug("  parse operand: dest=", destination, " pos=", this.pos);
       loc = this.pos;
       inPointer = false;
@@ -302,11 +306,15 @@ var exports = {};
         };
       }
       if (inPointer && (expr.binary != null) && ((expr.left.register != null) || (expr.right.register != null))) {
-        if (expr.binary !== '+') {
-          this.fail(loc, "Only a value + register is allowed");
+        if (!((_ref = expr.binary) === '+' || _ref === '-')) {
+          this.fail(loc, "Only a value +/- register is allowed");
         }
         register = expr.left.register != null ? expr.left.register : expr.right.register;
+        op = expr.binary;
         expr = expr.left.register != null ? expr.right : expr.left;
+        if (op === '-') {
+          expr = Expression.prototype.Unary(expr.text, expr.pos, '-', expr);
+        }
         return {
           loc: loc,
           code: 0x10 + register,
@@ -384,15 +392,38 @@ var exports = {};
         this.macros[name] = [];
       }
       this.macros[name].push(argNames.length);
-      return this.inMacro = fullname;
+      this.inMacro = fullname;
+      return {};
     };
 
     Assembler.prototype.parseDefineDirective = function() {
       var name, value;
       name = this.parseWord("Definition name");
       this.skipWhitespace();
-      value = this.parseExpression(0).evaluate();
-      return this.symtab[name] = value;
+      value = this.parseExpression(0).evaluate(this.symtab);
+      this.symtab[name] = value;
+      return {};
+    };
+
+    Assembler.prototype.parseOrgDirective = function() {
+      var expr, loc;
+      this.skipWhitespace();
+      loc = this.pos;
+      expr = this.parseExpression(0);
+      this.skipWhitespace();
+      if (this.pos < this.end) {
+        this.fail(this.pos, "ORG requires a single parameter");
+      }
+      return {
+        op: "org",
+        operands: [
+          {
+            loc: loc,
+            code: 0,
+            expr: expr
+          }
+        ]
+      };
     };
 
     Assembler.prototype.parseDirective = function() {
@@ -404,7 +435,10 @@ var exports = {};
         case "macro":
           return this.parseMacroDirective();
         case "define":
+        case "equ":
           return this.parseDefineDirective();
+        case "org":
+          return this.parseOrgDirective();
         default:
           return this.fail(loc, "Unknown directive: " + directive);
       }
@@ -488,7 +522,7 @@ var exports = {};
     };
 
     Assembler.prototype.parseData = function(line) {
-      var ch, data, expr, i, inWord, s, word, _i, _j, _ref, _ref1;
+      var ch, data, expr, i, inWord, rom, s, word, _i, _j, _ref, _ref1;
       data = [];
       while (this.pos < this.end) {
         if (this.text[this.pos] === '"') {
@@ -496,13 +530,17 @@ var exports = {};
           for (i = _i = 0, _ref = s.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
             data.push(s.charCodeAt(i));
           }
-        } else if (this.pos + 1 < this.end && this.text[this.pos] === 'p' && this.text[this.pos + 1] === '"') {
+        } else if (this.pos + 1 < this.end && (this.text[this.pos] === 'p' || this.text[this.pos] === 'r') && this.text[this.pos + 1] === '"') {
+          rom = this.text[this.pos] === 'r';
           this.pos++;
           s = this.parseString();
           word = 0;
           inWord = false;
           for (i = _j = 0, _ref1 = s.length; 0 <= _ref1 ? _j < _ref1 : _j > _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
             ch = s.charCodeAt(i);
+            if (rom && i === s.length - 1) {
+              ch |= 0x80;
+            }
             if (inWord) {
               data.push(word | ch);
             } else {
@@ -543,14 +581,20 @@ var exports = {};
         }
         return line;
       }
-      if (this.text[this.pos] === '#') {
+      if (this.text[this.pos] === '#' || this.text[this.pos] === '.') {
         this.pos++;
-        this.parseDirective();
-        return line;
+        return this.parseDirective();
       }
       if (this.text[this.pos] === ':') {
         this.pos++;
         line.label = this.parseWord("Label");
+        if (line.label[0] === ".") {
+          if (this.lastLabel != null) {
+            line.label = this.lastLabel + line.label;
+          }
+        } else {
+          this.lastLabel = line.label;
+        }
         this.skipWhitespace();
       }
       if (this.pos === this.end) {
@@ -567,7 +611,7 @@ var exports = {};
         delete line.op;
         this.pos++;
         this.skipWhitespace();
-        value = this.parseExpression(0).evaluate();
+        value = this.parseExpression(0).evaluate(this.symtab);
         this.symtab[name] = value;
         return line;
       }
@@ -590,6 +634,8 @@ var exports = {};
     };
 
     Assembler.prototype.compileLine = function(text, org) {
+      this.symtab["."] = org;
+      this.symtab["$"] = org;
       this.debug("+ compile line @ ", org, ": ", text, " -- symtab: ", this.symtab);
       return this.compileParsedLine(this.parseLine(text), org);
     };
@@ -598,6 +644,7 @@ var exports = {};
       var i, info, newinfo, x, _i, _j, _len, _ref, _ref1;
       this.debug("  parsed line: ", line);
       this.symtab["."] = org;
+      this.symtab["$"] = org;
       if (line.label != null) {
         this.symtab[line.label] = org;
       }
@@ -621,7 +668,7 @@ var exports = {};
           }
           newinfo = this.compileParsedLine(x, org);
           info.data = info.data.concat(newinfo.data);
-          org += newinfo.data.size;
+          org += newinfo.data.length;
           this.debug("  finished macro expansion: ", newinfo);
         }
         return info;
@@ -673,9 +720,9 @@ var exports = {};
         line.operands.unshift(this.parseOperand(true));
         return this.compileParsedLine(line, org);
       }
-      if (line.op === "brk") {
+      if (line.op === "hlt") {
         if (line.operands.length !== 0) {
-          this.fail(line.pos, "BRK has no parameters");
+          this.fail(line.pos, "HLT has no parameters");
         }
         return this.compileLine("sub pc, 1", org);
       }
@@ -931,7 +978,7 @@ var exports = {};
       _results.push(x);
     }
     return _results;
-  })()).concat(["jmp", "brk", "ret", "bra", "dat", "org", "equ"]);
+  })()).concat(["jmp", "hlt", "ret", "bra", "dat", "org", "equ"]);
 
   exports.Dcpu = Dcpu;
 
@@ -1170,10 +1217,12 @@ var exports = {};
           [].splice.apply(data, [n, (n + k) - n].concat(_ref = this.lines[j].data)), _ref;
           n += k;
         }
-        blocks.push({
-          org: orgStart,
-          data: data
-        });
+        if (data.length > 0) {
+          blocks.push({
+            org: orgStart,
+            data: data
+          });
+        }
       }
       blocks.sort(function(a, b) {
         return a.org > b.org;
@@ -1287,7 +1336,7 @@ var exports = {};
 
     function PrettyPrinter() {}
 
-    PrettyPrinter.prototype.colors = ["37", "33;1", "33", "31", "35", "34", "36", "32"];
+    PrettyPrinter.prototype.colors = ["37", "33;1", "33", "31", "35", "34;1", "36", "32"];
 
     PrettyPrinter.prototype.inColor = function(s, colorIndex) {
       colorIndex %= 8;
