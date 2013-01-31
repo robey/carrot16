@@ -64,7 +64,7 @@ class CodeView
   getCode: -> @editor.lines
 
   save: ->
-    new window.Blob([ @textarea.val() ], type: "text/plain")
+    new window.Blob([ @editor.lines.join("\n") ], type: "text/plain")
 
   activate: -> webui.Tabs.activate(@tab)
 
