@@ -74,7 +74,7 @@ class Emulator
     a = (instruction >> 10) & 0x3f
     b = (instruction >> 5) & 0x1f
 
-    # FIXME: BRK
+    # FIXME: HLT
 
     if op == 0
       @stepSpecial(b, a)
@@ -96,6 +96,7 @@ class Emulator
         when 0x1f # STD
           @registers.I = (@registers.I - 1) & 0xffff
           @registers.J = (@registers.J - 1) & 0xffff
+    if not @queueing then @triggerQueuedInterrupt()
 
   stepSpecial: (op, a) ->
     switch op
