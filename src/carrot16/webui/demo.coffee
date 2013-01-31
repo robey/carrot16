@@ -5,7 +5,7 @@ DEMO_CODE = """; demo of carrot16 in action!
   jsr setup_monitor
   jsr draw_logo
   jmp roll_colors
-  brk
+  hlt
 
 monitor_hi = 0x7349
 monitor_lo = 0xf615
@@ -24,7 +24,7 @@ line_size = 32
 :find_hardware
   hwn j
   set i, 0
-:find_hardware.1
+:.1
   hwq i
   ife a, monitor_lo
     ife b, monitor_hi
@@ -34,7 +34,7 @@ line_size = 32
       set [clock_hw], i
   add i, 1
   ifg j, i
-    bra find_hardware.1
+    bra .1
   ret
 
 :monitor_hw dat 0
@@ -50,13 +50,13 @@ black = 0
 green = 2
 red = 4
 orange = 6
+bright_black = 8
 bright_green = 10
 yellow = 14
 white = 15
 space = 32
 
-; FIXME: "bgcolor = yellow" doesn't work.
-bgcolor = 8
+bgcolor = bright_black
 
 :setup_monitor
   set a, monitor.map_screen
@@ -78,10 +78,10 @@ bgcolor = 8
   set i, custom_font
   set j, logo_font
   set x, logo_font.end
-:modify_font.1
+:.1
   sti [i], [j]
   ifl j, x
-    bra modify_font.1
+    bra .1
   set a, monitor.map_font
   set b, custom_font
   hwi [monitor_hw]
@@ -92,10 +92,10 @@ bgcolor = 8
   set x, bgcolor
   shl x, 8
   add x, space
-:clear.1
+:.1
   sti [i], x
   ifl i, z
-    bra clear.1
+    bra .1
   ret
 
 :draw_logo
@@ -115,13 +115,13 @@ bgcolor = 8
 :write_string
   ife [j], 0
     ret
-:write_string.1
+:.1
   set a, x
   shl a, 8
   bor a, [j]
   sti [i], a
   ifn [j], 0
-    bra write_string.1
+    bra .1
   ret
 
 :title
@@ -143,7 +143,7 @@ bgcolor = 8
   set a, clock.set_tick
   set b, 6
   hwi [clock_hw]
-  brk
+  hlt
 :tick.up
   add [custom_palette + green], 0x020
   add [custom_palette + orange], 0x110
