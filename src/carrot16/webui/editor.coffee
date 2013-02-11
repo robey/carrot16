@@ -40,6 +40,7 @@ class Editor
     #   - after a pause in typing (TYPING_RATE)
     #   - immediately on cut/paste, enter, or backspace/delete across lines
     @updateCallback = (-> true)
+    @syntaxHighlighter = (text) -> $("<span/>").text(text).html()
     @replaceText("")
     setTimeout((=> @init()), 1)
 
@@ -211,13 +212,13 @@ class Editor
   newLine: (line) ->
     div = $("<div />")
     div.addClass("editor-line")
-    div.text(line)
+    div.html(@syntaxHighlighter(line))
     div
 
   refreshLine: (n) ->
     if n < 0 or n >= @lines.length then return
     @div.lines[n].empty()
-    @div.lines[n].text(@lines[n])
+    @div.lines[n].html(@syntaxHighlighter(@lines[n]))
     # check for selection
     if @selection? and n >= @selection[0].y and n <= @selection[1].y
       x0 = if n > @selection[0].y then 0 else @selection[0].x

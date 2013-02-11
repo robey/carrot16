@@ -21,6 +21,12 @@ class CodeView
     CodeViewSet.add(@)
     @editor = new webui.Editor($("##{@name} .editor"))
     @editor.updateCallback = (=> @codeChanged())
+    @editor.syntaxHighlighter = (text) =>
+      pline = try
+        (new d16bunny.Parser()).parseLine(text, 0, ignoreErrors: true)
+      catch e
+        null
+      if pline? then pline.toHtml() else $("<span/>").text(text).html()
     @div =
       listing: $("##{@name} .editor-listing")
       pcline: $("##{@name} .code-pc-line")
@@ -144,7 +150,7 @@ class CodeView
     logger = (n, pos, message) => @logError(n, pos, message)
     asm = new d16bunny.Assembler(logger)
     @assembled = asm.compile(@getCode())
-    if @assembled.errorCount > 0
+    if @assembled.errors.length > 0
       @assembled = null
     else
       # kinda cheat by poking directly into memory.
@@ -180,7 +186,7 @@ class CodeView
       info = @assembled.lines[n]
       line = $("<div/>")
       if info.data.length > 0
-        addr = info.org
+        addr = info.address
         span = $("<span />")
         span.text(sprintf("%04x", addr))
         span.addClass("pointer")

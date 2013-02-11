@@ -326,3 +326,18 @@ a {
   font-weight: bold;
   color: #900;
 }
+
+/* ----- syntax highlighting ----- */
+
+/* b33 */
+
+.syntax-comment { color: #3bb; } /* dim cyan */
+.syntax-directive { color: #c33; } /* red */
+.syntax-identifier { color: #080; } /* dark green */
+.syntax-operator { color: #555; } /* gray */
+.syntax-string { color: #3b3; } /* green */
+.syntax-string-escape { color: #383; } /* less green */
+.syntax-register { color: #058; } /* ocean */
+.syntax-number { color: #058; } /* ocean */
+.syntax-instruction { color: #33b; } /* blue */
+.syntax-label { color: #052; } /* darkest green */
