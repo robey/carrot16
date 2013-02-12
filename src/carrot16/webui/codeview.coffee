@@ -11,7 +11,7 @@ class CodeView
     @tabName = "tab-#{@name}"
     @pane = $("#codeview-prototype").clone()
     @pane.attr("id", @name)
-    @pane.data "redraw", => @update()
+    @pane.data "redraw", => (@update(); @editor.focus())
     @pane.data "codeview", @
     @tab = $("#code-tab-prototype").clone()
     @tab.css("display", "block")

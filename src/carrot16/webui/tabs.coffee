@@ -9,7 +9,7 @@ Tabs =
     $("#pane-memory").data "redraw", => webui.MemView.update()
 
   connect: (tab, pane) ->
-    tab.click => @activate(tab)
+    tab.click => (@activate(tab); webui.Project.saveSession())
     tab.data("pane", pane)
     pane.data("tab", tab)
     tab.removeClass("active")
@@ -43,6 +43,7 @@ Tabs =
     n = @current() + 1
     if n >= @tablist.length then n = 0
     @activate(@tablist[n])
+    webui.Project.saveSession()
 
   openNewEditor: ->
     view = new webui.CodeView()
@@ -85,11 +86,20 @@ Tabs =
     if not data? then return
     @closeAll()
     data = JSON.parse(data)
-    for tabId in data.tabs
+    @continueLoadSession(projectId, data, 0)
+
+  # have to do this as a trampoline through the main chrome event loop, so it
+  # has time to render the pages and give us metrics.
+  continueLoadSession: (projectId, data, index) ->
+    if index < data.tabs.length
+      tabId = data.tabs[index]
       codeview = new webui.CodeView(tabId)
       codeview.loadSession("c16:editor-#{projectId}-#{tabId}")
-    if data.current >= 0 and data.current < @tablist.length
-      @activate(@tablist[data.current])
+      @activate(codeview.tab)
+      setTimeout((=> @continueLoadSession(projectId, data, index + 1)), 0)
+    else
+      if data.current >= 0 and data.current < @tablist.length
+        @activate(@tablist[data.current])
 
 
 exports.Tabs = Tabs

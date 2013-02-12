@@ -1018,6 +1018,9 @@ var exports = {};
 
     Line.prototype.skipWhitespace = function() {
       var c;
+      if (this.pos >= this.end) {
+        return;
+      }
       c = this.text[this.pos];
       while (this.pos < this.end && (c === " " || c === "\t" || c === "\r" || c === "\n")) {
         c = this.text[++this.pos];

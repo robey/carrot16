@@ -2,10 +2,10 @@
 # project-level commands like new, load, etc
 Project =
   init: ->
-    $("#menu-new").click => @openNew()
+    $("#menu-new").click => (@openNew(); @saveSession())
     $("#menu-load").click => @load()
     $("#menu-save").click => @save()
-    $("#menu-close").click => @closeTab()
+    $("#menu-close").click => (@closeTab(); @saveSession())
     $("#menu-rename").click => @rename()
     # thread "load" clicks through to the real file loader. (the web sucks.)
     $("#load_input").bind("change", Project.finishLoading)
@@ -63,6 +63,8 @@ Project =
     true
 
   saveSession: ->
+    keys = (for i in [0 ... localStorage.length] then localStorage.key(i))
+    for key in keys then if key[0...4] == "c16:" then localStorage.removeItem(key)
     localStorage.setItem("c16:current-project", @projectId)
     webui.Tabs.saveSession(@projectId)
 
