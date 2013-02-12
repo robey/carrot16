@@ -1,9 +1,4 @@
 
-#
-# todo:
-# - syntax highlighting
-#
-
 Array.prototype.insert = (n, x) -> @splice(n, 0, x)
 
 class Editor
@@ -111,7 +106,7 @@ class Editor
     if not @inited then return
     # make background size match editor
     @div.textBackground.css("width", @div.text.width())
-    @div.textBackground.css("height", @div.text.innerHeight())# - @div.text.position().top)
+    @div.textBackground.css("height", @div.text.innerHeight())
     @div.textBackground.css("top", 0)
     @div.textBackground.css("left", @div.text.position().left)
     # line numbers!
@@ -170,6 +165,16 @@ class Editor
       @div.text.append div
     @fixHeights()
     @fixSelection()
+
+  # returns metadata map, but not the contents
+  toStorage: ->
+    { x: @cursorX, y: @cursorY, selection: @selection, undo: @undoBuffer }
+
+  fromStorage: (data) ->
+    @setCursor(data.x, data.y)
+    @selection = data.selection
+    @undoBuffer = data.undo
+    for i in [0 ... @lines.length] then @refreshLine(i)
 
   getLineNumberDiv: (n) ->
     @div.lineNumbers[n]
@@ -251,10 +256,13 @@ class Editor
     windowBottom = windowTop + @element.height()
     lineTop = y * @lineHeight
     lineBottom = lineTop + @lineHeight
+    windowLines = @windowLines()
+    # if we have to scroll, move the desired line to at least 1/3 of the way up/down the screen
     if lineTop < windowTop
-      @element.scrollTop(Math.max(0, lineTop - @lineHeight))
+      windowTop = @lineHeight * (y - windowLines / 3)
     else if lineBottom > windowBottom
-      @element.scrollTop(lineTop - @lineHeight * (@windowLines() - 1))
+      windowTop = @lineHeight * (y - 2 * windowLines / 3)
+    @element.scrollTop(Math.max(0, windowTop))
 
   setCursor: (x, y) ->
     @moveCursor(x, y)

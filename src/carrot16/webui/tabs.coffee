@@ -32,12 +32,15 @@ Tabs =
 
   activeTab: ->
     @activePane?.data("tab")
-    
-  next: ->
-    tab = @activePane.data("tab")
+  
+  current: ->
+    tab = @activeTab()
     n = 0
-    while not (@tablist[n][0] is tab[0]) then n += 1
-    n += 1
+    while n < @tablist.length and not (@tablist[n][0] is tab[0]) then n += 1
+    n
+
+  next: ->
+    n = @current() + 1
     if n >= @tablist.length then n = 0
     @activate(@tablist[n])
 
@@ -55,9 +58,38 @@ Tabs =
     @next()
     @tablist = @tablist.filter (x) -> x isnt tab
     tab.remove()
-    CodeViewSet.remove(pane.data("codeview"))
+    webui.CodeViewSet.remove(pane.data("codeview"))
     pane.remove()
-    CodeViewSet.assemble()
+    webui.CodeViewSet.assemble()
+
+  closeAll: ->
+    for tab in @tablist
+      if tab.data("pane")?.data("codeview")?
+        @activate(tab)
+        @closeCurrent()
+        @closeAll()
+        return
+
+  saveSession: (projectId) ->
+    tabIds = []
+    for tab in @tablist
+      codeview = tab.data("pane")?.data("codeview")
+      if codeview?
+        tabIds.push(codeview.name)
+        codeview.saveSession("c16:editor-#{projectId}-#{codeview.name}")
+    data = { tabs: tabIds, current: @current() }
+    localStorage.setItem("c16:tabs-#{projectId}", JSON.stringify(data))
+
+  loadSession: (projectId) ->
+    data = localStorage.getItem("c16:tabs-#{projectId}")
+    if not data? then return
+    @closeAll()
+    data = JSON.parse(data)
+    for tabId in data.tabs
+      codeview = new webui.CodeView(tabId)
+      codeview.loadSession("c16:editor-#{projectId}-#{tabId}")
+    if data.current >= 0 and data.current < @tablist.length
+      @activate(@tablist[data.current])
 
 
 exports.Tabs = Tabs

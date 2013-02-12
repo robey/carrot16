@@ -125,7 +125,6 @@ $(document).keydown (event) =>
 $(document).keypress (event) =>
   if webui.EditBox.keypress(event.which) then return false
   if @runTimer? then return @keyboard.keypress(event.which)
-  if webui.Project.keypress(event.which) then return false
   true
 
 $(document).keyup (event) =>
@@ -154,14 +153,19 @@ $(document).ready =>
   webui.Registers.init()
   webui.Tabs.init()
   webui.MemView.init()
-  pane = webui.Tabs.openNewEditor()
-  pane.setCode(webui.DEMO_CODE)
-  pane.setName("demo")
+
+  $(document).bind "keydown", "alt+n", => (webui.Project.openNew(); webui.Project.saveSession(); false)
+  $(document).bind "keydown", "alt+o", => (webui.Project.load(); false)
+  $(document).bind "keydown", "alt+r", => (webui.Project.rename(); false)
+  $(document).bind "keydown", "alt+s", => (webui.Project.save(); false)
+  $(document).bind "keydown", "alt+w", => (webui.Project.closeTab(); webui.Project.saveSession(); false)
+
+  if not webui.Project.loadSession()
+    # load the demo.
+    pane = webui.Tabs.openNewEditor()
+    pane.setCode(webui.DEMO_CODE)
+    pane.setName("demo")
 
   reset()
   $(window).resize (event) -> resized()
   resized()
-
-#  window.localStorage.setItem("robey", "hello")
-# window.localStorage.getItem("robey")
-

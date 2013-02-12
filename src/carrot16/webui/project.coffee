@@ -1,17 +1,4 @@
 
-CTRL_L = 12
-CTRL_M = 13
-CTRL_N = 14
-CTRL_O = 15
-CTRL_P = 16
-CTRL_Q = 17
-CTRL_R = 18
-CTRL_S = 19
-CTRL_T = 20
-CTRL_U = 21
-CTRL_V = 22
-CTRL_W = 23
-
 # project-level commands like new, load, etc
 Project =
   init: ->
@@ -67,25 +54,17 @@ Project =
     if not webui.CodeViewSet.visible() then return
     webui.Tabs.activePane.data("codeview").editName()
 
-  keypress: (key) ->
-    switch event.which
-      when CTRL_N
-        @openNew()
-        true
-      when CTRL_O
-        @load()
-        true
-      when CTRL_R
-        @rename()
-        true
-      when CTRL_S
-        @save()
-        true
-      when CTRL_W
-        @closeTab()
-        true
-      else
-        false
+  loadSession: ->
+    @projectId = localStorage.getItem("c16:current-project")
+    if not @projectId?
+      @projectId = carrot16.Congeal.uniqueId()
+      return false
+    webui.Tabs.loadSession(@projectId)
+    true
+
+  saveSession: ->
+    localStorage.setItem("c16:current-project", @projectId)
+    webui.Tabs.saveSession(@projectId)
 
 
 exports.Project = Project

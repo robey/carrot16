@@ -1,12 +1,13 @@
 
 Key = carrot16.Key
+Congeal = carrot16.Congeal
 
 class CodeView
   typingDelay: 1000
   typingTimer: null
 
-  constructor: ->
-    @name = CodeViewSet.nextName()
+  constructor: (@name) ->
+    if not @name? then @name = CodeViewSet.nextName()
     @tabName = "tab-#{@name}"
     @pane = $("#codeview-prototype").clone()
     @pane.attr("id", @name)
@@ -33,6 +34,23 @@ class CodeView
     @assembled = null
     @breakpoints = {}
 
+  saveSession: (prefix) ->
+    data = @editor.toStorage()
+    data.filename = @getName()
+    data.breakpoints = @breakpoints
+    localStorage.setItem("#{prefix}:state", JSON.stringify(data))
+    localStorage.setItem("#{prefix}:text", @getCode().join("\n"))
+
+  loadSession: (prefix) ->
+    data = localStorage.getItem("#{prefix}:state")
+    text = localStorage.getItem("#{prefix}:text")
+    if not data? then return
+    data = JSON.parse(data)
+    @breakpoints = data.breakpoints if data.breakpoints?
+    @setName(data.filename) if data.filename?
+    @editor.replaceText(text) if text?
+    @editor.fromStorage(data)
+
   setName: (name) ->
     $("##{@tabName} a").text(name)
 
@@ -48,6 +66,7 @@ class CodeView
     $("##{@tabName} a").empty()
     edit.submit =>
       @setName(edit.val())
+      webui.Project.saveSession()
       edit.remove()
     edit.blur =>
       @setName(oldName)
@@ -70,7 +89,7 @@ class CodeView
   getCode: -> @editor.lines
 
   save: ->
-    new window.Blob([ @editor.lines.join("\n") ], type: "text/plain")
+    new window.Blob([ @getCode().join("\n") ], type: "text/plain")
 
   activate: -> webui.Tabs.activate(@tab)
 
@@ -79,6 +98,7 @@ class CodeView
   codeChanged: ->
     @update()
     CodeViewSet.assemble()
+    webui.Project.saveSession()
 
   # rebuild line number column, and resize textarea if necessary.
   update: ->
@@ -214,7 +234,6 @@ class CodeView
 
 
 CodeViewSet =
-  id: 1
   views: []
 
   visible: ->
@@ -224,9 +243,7 @@ CodeViewSet =
     $("#master-codeview").css("display", "none")
 
   nextName: ->
-    rv = "codeview-#{@id}"
-    @id += 1
-    rv
+    "codeview-#{Congeal.uniqueId()}"
 
   resizeAll: ->
     for v in @views then v.resize()
