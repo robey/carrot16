@@ -42,7 +42,8 @@ emulatorFiles = [
   "screen",
   "clock",
   "key",
-  "keyboard"
+  "keyboard",
+  "congeal"
 ]
 
 webFiles = [

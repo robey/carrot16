@@ -21,3 +21,6 @@ exports.Keyboard = keyboard.Keyboard
 
 editor = require './carrot16/editor'
 exports.Editor = editor.Editor
+
+congeal = require './carrot16/congeal'
+exports.Congeal = congeal.Congeal
