@@ -338,7 +338,8 @@ class Editor
 
   mouseOutEvent: (event) =>
     # weird chrome bug makes it send us a blur for moving between lines.
-    if event.toElement.parentElement is @div.text[0] then return
+    parent = event.toElement.parentElement
+    if (parent is @div.text[0]) or (parent.parentElement is @div.text[0]) then return
     [ x, y ] = @mouseToPosition(event)
     @setCursor(x, y)
     @addSelection(x, y)
