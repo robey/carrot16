@@ -129,8 +129,6 @@ $(document).keypress (event) =>
 
 $(document).keyup (event) =>
   if @input? then return true
-  if webui.Tabs.activePane?.data("keyup")?
-    return webui.Tabs.activePane?.data("keyup")(event.which)
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 

@@ -6,7 +6,7 @@ Tabs =
 
   init: ->
     @connect $("#tab-memory"), $("#pane-memory")
-    $("#pane-memory").data "redraw", => webui.MemView.update()
+    $("#pane-memory").data "focus", => webui.MemView.focus()
 
   connect: (tab, pane) ->
     tab.click => (@activate(tab); webui.Project.saveSession())
@@ -28,7 +28,7 @@ Tabs =
     @activePane.css("display", "block")
     tab.addClass("active")
     if @activePane.data("scroll")? then @activePane.scrollTop(@activePane.data("scroll"))
-    if @activePane.data("redraw")? then setTimeout((=> @activePane.data("redraw")()), 0)
+    if @activePane.data("focus")? then setTimeout((=> @activePane.data("focus")()), 0)
 
   activeTab: ->
     @activePane?.data("tab")

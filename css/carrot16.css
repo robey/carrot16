@@ -92,6 +92,10 @@ a {
 
 /* ----- memory view ----- */
 
+#pane-memory:focus {
+  outline: none;
+}
+
 #memory-scroller {
   overflow: scroll;
 }

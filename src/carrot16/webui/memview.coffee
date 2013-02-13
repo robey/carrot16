@@ -5,25 +5,38 @@ MemView =
   rows: null
 
   init: ->
-    $("#pane-memory").data "keyup", (key) =>
-      view = $("#memory-view")
+    pane = $("#pane-memory")
+    view = $("#memory-view")
+    pane.bind "keydown", "up", =>
       top = view.scrollTop()
-      Key = carrot16.Key
-      switch key
-        when Key.UP
-          view.scrollTop(Math.max(top - 1, 0))
-          false
-        when Key.DOWN
-          view.scrollTop(top + 1)
-          false
-        when Key.PAGE_UP
-          view.scrollTop(Math.max(top - @rows, 0))
-          false
-        when Key.PAGE_DOWN
-          view.scrollTop(top + @rows)
-          false
-        else
-          true
+      view.scrollTop(Math.max(top - 1, 0))
+      false
+    pane.bind "keydown", "down", =>
+      top = view.scrollTop()
+      view.scrollTop(top + 1)
+      false
+    pane.bind "keydown", "pageup", =>
+      top = view.scrollTop()
+      view.scrollTop(Math.max(top - @rows, 0))
+      false
+    pane.bind "keydown", "pagedown", =>
+      top = view.scrollTop()
+      view.scrollTop(top + @rows)
+      false
+    pane.bind "keydown", "shift+up", =>
+      top = view.scrollTop()
+      view.scrollTop(Math.max(top - (4096 / @columns), 0))
+      false
+    pane.bind "keydown", "shift+down", =>
+      top = view.scrollTop()
+      view.scrollTop(top + (4096 / @columns))
+      false
+    pane.bind "keydown", "meta+up", =>
+      view.scrollTop(0)
+      false
+    pane.bind "keydown", "meta+down", =>
+      view.scrollTop(0x10000)
+      false
 
   scrollTo: (addr) ->
     webui.Tabs.activate $("#tab-memory")
@@ -38,6 +51,10 @@ MemView =
   resized: ->
     @columns = null
     @offset = null
+
+  focus: ->
+    @update()
+    $("#pane-memory").focus()
 
   update: ->
     if not @visible() then return

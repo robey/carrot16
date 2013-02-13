@@ -11,7 +11,7 @@ class CodeView
     @tabName = "tab-#{@name}"
     @pane = $("#codeview-prototype").clone()
     @pane.attr("id", @name)
-    @pane.data "redraw", => (@update(); @editor.focus())
+    @pane.data "focus", => (@update(); @editor.focus())
     @pane.data "codeview", @
     @tab = $("#code-tab-prototype").clone()
     @tab.css("display", "block")
@@ -50,6 +50,8 @@ class CodeView
     @setName(data.filename) if data.filename?
     @editor.replaceText(text) if text?
     @editor.fromStorage(data)
+    # refresh breakpoint indicators (FIXME doesnt actually work)
+    for line, isSet of @breakpoints then @setBreakpoint(line, isSet)
 
   setName: (name) ->
     $("##{@tabName} a").text(name)
@@ -100,12 +102,12 @@ class CodeView
     CodeViewSet.assemble()
     webui.Project.saveSession()
 
-  # rebuild line number column, and resize textarea if necessary.
   update: ->
     @editor.foreachLine (i, text) =>
       @editor.onLineNumberClick i, => @toggleBreakpoint(i)
     @resize()
 
+  # rebuild line number column, and resize textarea if necessary.
   resize: ->
     @pane.height($(window).height() - @pane.offset().top - webui.LogPane.height())
     @editor.setCursor()
@@ -118,7 +120,7 @@ class CodeView
       @editor.moveDivToLine(@div.pcline, n)
       if alsoScroll
         if not @visible() then @activate()
-        @scrollToLine(n)
+        setTimeout((=> @scrollToLine(n)), 0)
     else
       @div.pcline.css("display", "none")
 
@@ -176,7 +178,7 @@ class CodeView
       # kinda cheat by poking directly into memory.
       @assembled.createImage(emulator.memory.memory)
       # turn off breakpoints that aren't code anymore.
-      for line, isSet of @breakpoints #when isSet
+      for line, isSet of @breakpoints
         @setBreakpoint(line, isSet)
     @debug "finished assembly of #{@getName()} in #{Date.now() - startTime} msec"
     @buildDump()
