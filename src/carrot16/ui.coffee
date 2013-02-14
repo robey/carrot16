@@ -33,10 +33,15 @@
 # ----- emulator buttons
 
 @runTimer = null
+@runUntilPc = null
 @run = ->
   if @runTimer?
     @stopRun()
     return
+  @runUntilPc = null
+  @startRun()
+
+@startRun = ->
   @clock.start()
   @runTimer = setInterval((=> @clockTick()), @TIME_SLICE_MSEC)
   $("#button_run").html("&#215; Stop (F2)")
@@ -47,6 +52,7 @@
   @runTimer = null
   @lastCycles = null
   $("#button_run").html("&#8595; Run (F2)")
+  @emulator.halting = false
   @updateViews(scroll: true)
 
 @clockTick = ->
@@ -56,13 +62,10 @@
     if not @runTimer? then return
     @emulator.step()
     if not @runTimer? then return
-    if @emulator.onFire
+    if @emulator.onFire or (@emulator.registers.PC == @runUntilPc) or webui.CodeViewSet.atBreakpoint()
       @stopRun()
       return
-    if webui.CodeViewSet.atBreakpoint()
-      @stopRun()
-      return
-    if @emulator.cycles >= @lastCycles + @CYCLES_PER_SLICE
+    if @emulator.halting or (@emulator.cycles >= @lastCycles + @CYCLES_PER_SLICE)
       # funny math here is because we might have done more cycles than we
       # were supposed to. so we want them to be credited to the next slice.
       @lastCycles += @CYCLES_PER_SLICE
@@ -78,6 +81,13 @@
   @emulator.step()
   # no point in updating the cpu heat, since we didn't do a full slice.
   @updateViews(scroll: true)
+
+@stepOver = ->
+  if @runTimer?
+    @stopRun()
+    return
+  @runUntilPc = @emulator.nextInstructionPc()
+  @startRun()
 
 @prepareRun = ->
   @memoryReads = []
@@ -103,32 +113,15 @@ Key = carrot16.Key
 # return false to abort default handling of the event.
 $(document).keydown (event) =>
   if webui.EditBox.keydown(event.which) then return false
-  switch event.which
-    when Key.TAB
-      webui.Tabs.next()
-      return false
-    when Key.F1
-      reset()
-      return false
-    when Key.F2
-      $("#button_run").click()
-      return false
-    when Key.F3
-      step()
-      return false
-  if not @runTimer?
-    if webui.Tabs.activePane?.data("keydown")?
-      return webui.Tabs.activePane?.data("keydown")(event.which)
-    return true
+  if not @runTimer? then return true
   @keyboard.keydown(event.which)
 
 $(document).keypress (event) =>
   if webui.EditBox.keypress(event.which) then return false
-  if @runTimer? then return @keyboard.keypress(event.which)
-  true
+  if not @runTimer? then return true
+  @keyboard.keypress(event.which)
 
 $(document).keyup (event) =>
-  if @input? then return true
   if not @runTimer? then return true
   @keyboard.keyup(event.which)
 
@@ -157,6 +150,13 @@ $(document).ready =>
   $(document).bind "keydown", "alt+r", => (webui.Project.rename(); false)
   $(document).bind "keydown", "alt+s", => (webui.Project.save(); false)
   $(document).bind "keydown", "alt+w", => (webui.Project.closeTab(); webui.Project.saveSession(); false)
+
+  $(document).bind "keydown", "f1", => (reset(); false)
+  $(document).bind "keydown", "f2", => (run(); false)
+  $(document).bind "keydown", "f3", => (step(); false)
+  $(document).bind "keydown", "f4", => (stepOver(); false)
+  $(document).bind "keydown", "alt+tab", => (webui.Tabs.next(); false)
+  $(document).bind "keydown", "alt+shift+tab", => (webui.Tabs.previous(); false)
 
   if not webui.Project.loadSession()
     # load the demo.

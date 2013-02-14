@@ -45,6 +45,12 @@ Tabs =
     @activate(@tablist[n])
     webui.Project.saveSession()
 
+  previous: ->
+    n = @current() - 1
+    if n < 0 then n = @tablist.length - 1
+    @activate(@tablist[n])
+    webui.Project.saveSession()
+
   openNewEditor: ->
     view = new webui.CodeView()
     view.setName("(untitled)")

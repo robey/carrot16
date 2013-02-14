@@ -67,14 +67,21 @@ class Emulator
   # execute one instruction at PC.
   step: ->
     if @onFire then return
-    if not @queueing then @triggerQueuedInterrupt()
+    interrupting = if @queueing then false else @triggerQueuedInterrupt()
+    if @halting
+      if not interrupting then return
+      @halting = false
 
     instruction = @nextPC()
     op = instruction & 0x1f
     a = (instruction >> 10) & 0x3f
     b = (instruction >> 5) & 0x1f
 
-    # FIXME: HLT
+    if instruction == 0x8b83
+      # HLT
+      @halting = true
+      @registers.PC = (@registers.PC - 1) & 0xffff
+      return
 
     if op == 0
       @stepSpecial(b, a)
@@ -233,21 +240,33 @@ class Emulator
         if @signed(bv) >= @signed(av) then @skip()
     @cycles += 2
 
-  skip: ->
+  nextInstructionPc: ->
+    [ words, cycles ] = @stepLength()
+    (@registers.PC + words) & 0xffff
+
+  # how long is this instruction, in words?
+  # (includes chained conditionals)
+  stepLength: ->
+    words = 0
+    cycles = 0
     loop
-      @cycles += 1
-      instruction = @nextPC()
+      instruction = @memory.peek((@registers.PC + words) & 0xffff)
+      words += 1
+      cycles += 1
       op = instruction & 0x1f
       a = (instruction >> 10) & 0x3f
       b = (instruction >> 5) & 0x1f
-      @skipOperand(a)
-      @skipOperand(b)
-      return if op < 0x10 or op > 0x17
+      words += 1 if @operandHasImmediate(a)
+      words += 1 if @operandHasImmediate(b)
+      return [ words, cycles ] if op < 0x10 or op > 0x17
 
-  skipOperand: (operand) ->
-    if (operand >= 0x10 and operand < 0x18) or (operand == 0x1a) or (operand == 0x1e) or (operand == 0x1f)
-      # [R + imm], [SP + imm], [imm], imm
-      @nextPC()
+  operandHasImmediate: (operand) ->
+    (operand >= 0x10 and operand < 0x18) or (operand == 0x1a) or (operand == 0x1e) or (operand == 0x1f)
+
+  skip: ->
+    [ words, cycles ] = @stepLength()
+    @cycles += cycles
+    @registers.PC = (@registers.PC + words) & 0xffff
 
   # operand: the A or B operand
   # destination: true if the operand is in the destination position (vs. source)
