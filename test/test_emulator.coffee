@@ -216,16 +216,12 @@ describe "Emulator", ->
 
     it "INT", ->
       preloadSpecial(e, 0x08, 0x01)
-      e.registers.B = 9
-      e.step()
-      e.interruptQueue.should.eql([ 9 ])
-      # now trigger it
-      e.registers.A = 99
       e.registers.IA = 0xf333
       e.registers.SP = 0x100
-      e.memory.set(0xf333, 0)
+      e.registers.A = 99
+      e.registers.B = 9
       e.step()
-      e.registers.PC.should.equal(0xf334)
+      e.registers.PC.should.equal(0xf333)
       e.registers.A.should.equal(9)
       e.registers.SP.should.equal(0xfe)
       e.memory.get(0xff).should.equal(0x11)
