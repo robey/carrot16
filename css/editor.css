@@ -73,7 +73,7 @@
 }
 
 .editor-selection {
-  background-color: #08f;
+  background-color: #3bf;
   position: absolute;
   z-index: -1;
   opacity: 0.5;
