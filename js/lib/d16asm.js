@@ -1089,11 +1089,30 @@ var exports = {};
       if (!(word != null)) {
         this.fail("" + name + " must contain only letters, digits, _ or .");
       }
-      word = word.toLowerCase();
       if (Dcpu.Reserved[word] || Dcpu.ReservedOp[word]) {
         this.fail("Reserved keyword: " + word);
       }
       return word;
+    };
+
+    Line.prototype.parseIdentifier = function(name) {
+      return this.parseWord(name, Span.Identifier);
+    };
+
+    Line.prototype.parseLabel = function(name) {
+      return this.parseWord(name, Span.Label);
+    };
+
+    Line.prototype.parseInstruction = function(name) {
+      return this.parseWord(name, Span.Instruction).toLowerCase();
+    };
+
+    Line.prototype.parseDirective = function(name) {
+      return this.parseWord(name, Span.Directive).toLowerCase();
+    };
+
+    Line.prototype.parseMacroName = function(name) {
+      return this.parseWord(name, Span.Instruction);
     };
 
     Line.prototype.parseMacroArg = function() {
@@ -1729,7 +1748,7 @@ var exports = {};
         return pline;
       }
       if (line.scan(":", Span.Label)) {
-        pline.label = line.parseWord("Label", Span.Label);
+        pline.label = line.parseLabel("Label");
         pline.label = this.fixLabel(pline.label, true);
         line.skipWhitespace();
       }
@@ -1737,7 +1756,7 @@ var exports = {};
         return pline;
       }
       pline.opPos = line.mark();
-      pline.op = line.parseWord("Operation name", Span.Instruction);
+      pline.op = line.parseInstruction("Operation name");
       if (pline.op === "equ") {
         line.rewind(pline.opPos);
         line.scanAssert("equ", Span.Directive);
@@ -1775,7 +1794,7 @@ var exports = {};
       if (line.scan("=", Span.Operator)) {
         line.rewind(pline.opPos);
         delete pline.op;
-        name = line.parseWord("Constant name", Span.Identifier);
+        name = line.parseIdentifier("Constant name");
         line.skipWhitespace();
         line.scanAssert("=", Span.Operator);
         line.skipWhitespace();
@@ -2019,7 +2038,7 @@ var exports = {};
     Parser.prototype.parseDirective = function(line, pline) {
       var m, _ref;
       m = line.mark();
-      pline.directive = line.parseWord("Directive", Span.Directive);
+      pline.directive = line.parseDirective("Directive");
       line.skipWhitespace();
       if ((_ref = pline.directive) === "if" || _ref === "else" || _ref === "endif") {
         if (this.inMacro) {
@@ -2064,7 +2083,7 @@ var exports = {};
     Parser.prototype.parseDefineDirective = function(line, pline) {
       var name;
       delete pline.directive;
-      name = line.parseWord("Definition name");
+      name = line.parseIdentifier("Definition name");
       line.skipWhitespace();
       this.constants[name] = this.parseExpression(line);
       this.constants[name].lineNumber = pline.lineNumber;
@@ -2086,7 +2105,7 @@ var exports = {};
     Parser.prototype.parseMacroDirective = function(line, pline) {
       var fullname, m, parameters;
       m = line.mark();
-      pline.name = line.parseWord("Macro name");
+      pline.name = line.parseIdentifier("Macro name");
       line.skipWhitespace();
       parameters = this.parseMacroParameters(line);
       line.skipWhitespace();
@@ -2116,7 +2135,7 @@ var exports = {};
         if (line.scan(")", Span.Directive)) {
           return args;
         }
-        args.push(line.parseWord("Argument name"));
+        args.push(line.parseIdentifier("Argument name"));
         line.skipWhitespace();
         if (line.scan(",", Span.Directive)) {
           line.skipWhitespace();
@@ -2129,7 +2148,7 @@ var exports = {};
       var argIndexes, args, m, name, _ref,
         _this = this;
       m = line.mark();
-      name = line.parseWord("Macro name", Span.Instruction);
+      name = line.parseMacroName("Macro name");
       line.skipWhitespace();
       if (line.scan("(", Span.Operator)) {
         line.skipWhitespace();
