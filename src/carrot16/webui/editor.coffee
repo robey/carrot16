@@ -226,13 +226,17 @@ class Editor
     @div.lines[n].html(@syntaxHighlighter(@lines[n]))
     # check for selection
     if @selection? and n >= @selection[0].y and n <= @selection[1].y
+      len = @lines[n].length
       x0 = if n > @selection[0].y then 0 else @selection[0].x
-      x1 = if n < @selection[1].y then @lines[n].length else @selection[1].x
+      x1 = Math.min((if n < @selection[1].y then len else @selection[1].x), len)
+      width = (x1 - x0) * @em
+      # show *something* for an empty line
+      if width == 0 then width = (0.5 * @em)
       box = $("<div />")
       box.addClass("editor-selection")
       @div.lines[n].append(box)
       box.css("left", x0 * @em)
-      box.css("width", (x1 - x0) * @em)
+      box.css("width", width)
 
   deleteLine: (n) ->
     @lines[n..n] = []
