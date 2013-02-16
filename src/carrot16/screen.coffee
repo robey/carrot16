@@ -221,7 +221,7 @@ class Screen extends Hardware
           xbase = (x * @CELL_WIDTH + cx) * @PIXEL_SIZE
           for cy in [0 ... @CELL_HEIGHT]
             ybase = ((y + 1) * @CELL_HEIGHT - cy - 1) * @PIXEL_SIZE
-            color = if (fontWord & bit) == bit and not (@blinking and not @showingBlink) then fc else bc
+            color = if (fontWord & bit) == bit and not (blink and not @showingBlink) then fc else bc
             for px in [0 ... @PIXEL_SIZE]
               for py in [0 ... @PIXEL_SIZE]
                 offset = (ybase + py) * lineSize + ((xbase + px) * 4)
