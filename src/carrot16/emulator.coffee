@@ -241,31 +241,30 @@ class Emulator
     @cycles += 2
 
   nextInstructionPc: ->
-    [ words, cycles ] = @stepLength()
-    (@registers.PC + words) & 0xffff
+    @stepLength().map (w) => (@registers.PC + w) & 0xffff
 
   # how long is this instruction, in words?
-  # (includes chained conditionals)
+  # also return how long it was in chaned conditionals.
   stepLength: ->
     words = 0
-    cycles = 0
+    conditionWords = 0
     loop
       instruction = @memory.peek((@registers.PC + words) & 0xffff)
+      conditionWords = words
       words += 1
-      cycles += 1
       op = instruction & 0x1f
       a = (instruction >> 10) & 0x3f
       b = (instruction >> 5) & 0x1f
-      words += 1 if @operandHasImmediate(a)
-      words += 1 if @operandHasImmediate(b)
-      return [ words, cycles ] if op < 0x10 or op > 0x17
+      if @operandHasImmediate(a) then words += 1
+      if @operandHasImmediate(b) then words += 1
+      return [ words, conditionWords ] if op < 0x10 or op > 0x17
 
   operandHasImmediate: (operand) ->
     (operand >= 0x10 and operand < 0x18) or (operand == 0x1a) or (operand == 0x1e) or (operand == 0x1f)
 
   skip: ->
-    [ words, cycles ] = @stepLength()
-    @cycles += cycles
+    [ words, conditionWords ] = @stepLength()
+    @cycles += words
     @registers.PC = (@registers.PC + words) & 0xffff
 
   # operand: the A or B operand

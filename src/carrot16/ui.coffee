@@ -33,12 +33,12 @@
 # ----- emulator buttons
 
 @runTimer = null
-@runUntilPc = null
+@runUntilPc = [ null, null ]
 @run = ->
   if @runTimer?
     @stopRun()
     return
-  @runUntilPc = null
+  @runUntilPc = [ null, null ]
   @startRun()
 
 @startRun = ->
@@ -62,7 +62,10 @@
     if not @runTimer? then return
     @emulator.step()
     if not @runTimer? then return
-    if @emulator.onFire or (@emulator.registers.PC == @runUntilPc) or webui.CodeViewSet.atBreakpoint()
+    if @emulator.onFire or webui.CodeViewSet.atBreakpoint()
+      @stopRun()
+      return
+    if @emulator.registers.PC == @runUntilPc[0] or @emulator.registers.PC == @runUntilPc[1]
       @stopRun()
       return
     if @emulator.halting or (@emulator.cycles >= @lastCycles + @CYCLES_PER_SLICE)
@@ -98,6 +101,7 @@
   @cpuHeat = (Date.now() - startTime) * 1.0 / @TIME_SLICE_MSEC
 
 @reset = ->
+  if @runTimer? then @stopRun()
   @memoryReads = []
   @memoryWrites = []
   @cpuHeat = 0.0
