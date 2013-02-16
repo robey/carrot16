@@ -54,6 +54,7 @@ class Editor
     @div.text.keypress (event) =>
       if event.which >= 0x20 and event.which <= 0x7e then (@insertChar(event.which); false)
     # new-style key bindings
+    @div.text.bind "keydown", "tab", => (@tab(); false)
     @div.text.bind "keydown", "up", => (@up(); false)
     @div.text.bind "keydown", "shift+up", => (@moveSelection(@SELECTION_LEFT, => @moveUp()); false)
     @div.text.bind "keydown", "down", => (@down(); false)
@@ -567,6 +568,21 @@ class Editor
     @typingFinished()
     [ x, y ] = @insertLF(@cursorX, @cursorY)
     @addUndo(Undo.DELETE, @cursorX, @cursorY, "\n", x, y)
+    @setCursor(x, y)
+
+  tab: ->
+    if @selection? then @deleteSelection()
+    @virtualX = 0
+    @typed()
+    minX = 0
+    if @cursorY > 0
+      prevLine = @lines[@cursorY - 1]
+      while minX < prevLine.length and prevLine[minX] == " " then minX += 1
+    if @cursorX >= minX
+      minX = (@cursorX + 2) & 0xfffe
+    text = (for i in [0 ... minX - @cursorX] then " ").join("")
+    [ x, y ] = @insertText(@cursorX, @cursorY, text)
+    @addUndo(Undo.DELETE, @cursorX, @cursorY, text, x, y)
     @setCursor(x, y)
 
   # ----- selection
