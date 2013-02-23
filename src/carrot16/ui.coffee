@@ -154,6 +154,7 @@ $(document).ready =>
   $(document).bind "keydown", "alt+r", => (webui.Project.rename(); false)
   $(document).bind "keydown", "alt+s", => (webui.Project.save(); false)
   $(document).bind "keydown", "alt+w", => (webui.Project.closeTab(); webui.Project.saveSession(); false)
+  $(document).bind "keydown", "alt+d", => (webui.Project.disassemble(); false)
 
   $(document).bind "keydown", "f1", => (reset(); false)
   $(document).bind "keydown", "f2", => (run(); false)

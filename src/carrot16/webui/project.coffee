@@ -7,6 +7,7 @@ Project =
     $("#menu-save").click => @save()
     $("#menu-close").click => (@closeTab(); @saveSession())
     $("#menu-rename").click => @rename()
+    $("#menu-disassemble").click => @disassemble()
     # thread "load" clicks through to the real file loader. (the web sucks.)
     $("#load_input").bind("change", Project.finishLoading)
 
@@ -67,6 +68,16 @@ Project =
     for key in keys then if key[0...4] == "c16:" then localStorage.removeItem(key)
     localStorage.setItem("c16:current-project", @projectId)
     webui.Tabs.saveSession(@projectId)
+
+  disassemble: ->
+    d = new d16bunny.Disassembler(emulator.memory.memory)
+    lines = d.disassemble()
+    # get rid of any old tab
+    webui.Tabs.closeByName("(disassembled)")
+    view = new webui.CodeView()
+    view.setName("(disassembled)")
+    view.setCode(lines.join("\n"))
+    view.activate()
 
 
 exports.Project = Project

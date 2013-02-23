@@ -57,17 +57,24 @@ Tabs =
     view.activate()
     view
 
-  closeCurrent: ->
-    if not @activePane? then return
-    if not webui.CodeViewSet.visible() then return
-    pane = @activePane
+  close: (pane) ->
     tab = pane.data("tab")
-    @next()
+    if tab is @activeTab() then @next()
     @tablist = @tablist.filter (x) -> x isnt tab
     tab.remove()
     webui.CodeViewSet.remove(pane.data("codeview"))
     pane.remove()
     webui.CodeViewSet.assemble()
+
+  closeCurrent: ->
+    if not @activePane? then return
+    if not webui.CodeViewSet.visible() then return
+    @close(@activePane)
+
+  closeByName: (name) ->
+    view = webui.CodeViewSet.findByName(name)
+    if not view? then return
+    @close(view.pane)
 
   closeAll: ->
     for tab in @tablist

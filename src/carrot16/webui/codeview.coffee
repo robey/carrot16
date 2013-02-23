@@ -275,6 +275,10 @@ CodeViewSet =
   remove: (view) ->
     @views = @views.filter (x) -> x isnt view
 
+  findByName: (name) ->
+    for v in @views then if v.getName() == name then return v
+    null
+
 
 exports.CodeView = CodeView
 exports.CodeViewSet = CodeViewSet
