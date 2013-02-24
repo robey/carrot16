@@ -152,7 +152,7 @@ $(document).ready =>
   $(document).bind "keydown", "alt+n", => (webui.Project.openNew(); webui.Project.saveSession(); false)
   $(document).bind "keydown", "alt+o", => (webui.Project.load(); false)
   $(document).bind "keydown", "alt+r", => (webui.Project.rename(); false)
-  $(document).bind "keydown", "alt+s", => (webui.Project.save(); false)
+  $(document).bind "keydown", "alt+s", => (webui.Project.saveCode(); false)
   $(document).bind "keydown", "alt+w", => (webui.Project.closeTab(); webui.Project.saveSession(); false)
   $(document).bind "keydown", "alt+d", => (webui.Project.disassemble(); false)
 

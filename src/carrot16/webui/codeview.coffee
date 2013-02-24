@@ -279,6 +279,9 @@ CodeViewSet =
     for v in @views then if v.getName() == name then return v
     null
 
+  firstName: ->
+    if @views.length > 0 then @views[0].getName() else "none"
+
 
 exports.CodeView = CodeView
 exports.CodeViewSet = CodeViewSet
