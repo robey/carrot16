@@ -790,16 +790,19 @@ var exports = {};
         opcode = b;
         b = null;
         opname = Dcpu.SpecialOpNames[opcode];
-      } else {
-        opname = Dcpu.BinaryOpNames[opcode];
         if (opname != null) {
-          bArgument = this.hasImmediate[b] ? this.nextWord() : void 0;
+          aArgument = this.hasImmediate[a] ? this.nextWord() : void 0;
         } else {
           null;
         }
+      } else {
+        opname = Dcpu.BinaryOpNames[opcode];
+        if (opname != null) {
+          aArgument = this.hasImmediate[a] ? this.nextWord() : null;
+          bArgument = this.hasImmediate[b] ? this.nextWord() : null;
+        }
       }
       if (opname != null) {
-        aArgument = this.hasImmediate[a] ? this.nextWord() : null;
         if (a >= 0x20) {
           aArgument = (a - 0x21) & 0xffff;
           a = Operand.Immediate;
@@ -2352,7 +2355,7 @@ var exports = {};
           break;
         default:
           line.pointTo(m);
-          line.fail("Unknown directive: " + directive);
+          line.fail("Unknown directive: " + pline.directive);
       }
       return true;
     };
